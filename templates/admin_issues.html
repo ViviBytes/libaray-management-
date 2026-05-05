@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issued Books</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #eef3ff; color: #1f2937; }
+    .wrap { max-width: 1120px; margin: 24px auto; background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+    a { color: #1d4ed8; text-decoration: none; }
+    .btn { background: #047857; color: #fff; padding: 6px 10px; border-radius: 7px; text-decoration: none; font-size: 13px; }
+    .issue-box { margin-top: 16px; border: 1px solid #dbe3f5; border-radius: 12px; padding: 14px; background: #f8faff; }
+    .issue-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+    select, button { padding: 10px; border-radius: 8px; border: 1px solid #dbe3f5; }
+    button { border: 0; background: #1d4ed8; color: #fff; font-weight: 600; cursor: pointer; }
+    .msg { margin: 10px 0 0; color: #0f5132; font-weight: 600; }
+    .notice { margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; font-weight: 600; }
+    .error-text { color: #b91c1c; font-size: 13px; }
+    .helper-link { color: #1d4ed8; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { border: 1px solid #dbe3f5; padding: 9px; text-align: left; }
+    th { background: #f5f8ff; }
+    @media (max-width: 900px) { .issue-form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="top">
+      <h2>Issued Books List</h2>
+      <a href="/admin">Back Dashboard</a>
+    </div>
+    {% if message %}
+    <div class="notice">{{ message }}</div>
+    {% endif %}
+    <section class="issue-box">
+      <h3>Issue Book From Admin Panel</h3>
+      <form method="post" class="issue-form">
+        <select name="username" required>
+          <option value="">Select user</option>
+          {% for user in users %}
+          <option value="{{ user }}">{{ user }}</option>
+          {% endfor %}
+        </select>
+        <select name="book" required>
+          <option value="">Select available book</option>
+          {% for book in available_books %}
+          <option value="{{ book[0] }}">{{ book[0] }} - {{ book[1] }} ({{ book[2] }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Issue Book</button>
+      </form>
+      {% if message %}
+      <p class="msg">{{ message }}</p>
+      {% endif %}
+    </section>
+    <table>
+      <thead>
+        <tr><th>Issue ID</th><th>User</th><th>Book</th><th>Issue Date</th><th>Due</th><th>Status</th><th>Returned At</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for r in issued_records %}
+        <tr>
+          <td>{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td><td>{{ r[3] or "-" }}</td><td>{{ r[4] }}</td><td>{{ r[5] }}</td><td>{{ r[6] or "-" }}</td>
+          <td>{% if r[5] == "Issued" %}<a class="btn" href="/return/{{ r[0] }}">Mark Returned</a>{% else %}-{% endif %}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8">No issued records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <section class="issue-box">
+      <h3>Book Request List</h3>
+      <table>
+        <thead>
+          <tr><th>User</th><th>Email</th><th>Book</th><th>Requested At</th><th>Status</th><th>Email Result</th></tr>
+        </thead>
+        <tbody>
+          {% for r in book_requests %}
+          <tr>
+            <td>{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td><td>{{ r[3] or "-" }}</td><td>{{ r[4] }}</td>
+            <td>
+              {% if r[5] %}
+              <span class="error-text">{{ r[5] }}</span>
+              {% else %}
+              -
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6">No book requests found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </section>
+</body>
+</html>

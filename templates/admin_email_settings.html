@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Settings</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #eef3ff; color: #1f2937; }
+    .wrap { max-width: 840px; margin: 24px auto; background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    a { color: #1d4ed8; text-decoration: none; }
+    .notice { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; font-weight: 600; }
+    .box { margin-top: 18px; border: 1px solid #dbe3f5; border-radius: 12px; padding: 16px; background: #f8faff; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #dbe3f5; }
+    .actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+    button { border: 0; background: #1d4ed8; color: #fff; font-weight: 600; border-radius: 9px; padding: 10px 14px; cursor: pointer; }
+    .ghost { background: #0f766e; }
+    .help { margin-top: 12px; color: #475569; line-height: 1.6; }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="top">
+      <h2>Email Settings</h2>
+      <a href="/admin">Back Dashboard</a>
+    </div>
+    {% if message %}
+    <div class="notice">{{ message }}</div>
+    {% endif %}
+
+    <form method="post" class="box">
+      <div class="grid">
+        <div>
+          <label for="smtp_host">SMTP Host</label>
+          <input id="smtp_host" name="smtp_host" value="{{ settings['SMTP_HOST'] }}" placeholder="smtp.gmail.com" required>
+        </div>
+        <div>
+          <label for="smtp_port">SMTP Port</label>
+          <input id="smtp_port" name="smtp_port" value="{{ settings['SMTP_PORT'] }}" placeholder="587" required>
+        </div>
+        <div>
+          <label for="smtp_user">Sender Gmail</label>
+          <input id="smtp_user" name="smtp_user" value="{{ settings['SMTP_USER'] }}" placeholder="your-email@gmail.com" required>
+        </div>
+        <div>
+          <label for="smtp_from">From Email</label>
+          <input id="smtp_from" name="smtp_from" value="{{ settings['SMTP_FROM'] }}" placeholder="your-email@gmail.com">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label for="smtp_pass">Gmail App Password</label>
+          <input id="smtp_pass" name="smtp_pass" type="password" value="{{ settings['SMTP_PASS'] }}" placeholder="16-digit app password" required>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label for="test_email">Test Email</label>
+          <input id="test_email" name="test_email" value="{{ settings['SMTP_USER'] }}" placeholder="Where test mail should be sent">
+        </div>
+      </div>
+      <div class="actions">
+        <button type="submit" name="action" value="save">Save Settings</button>
+        <button type="submit" name="action" value="test" class="ghost">Save And Send Test Email</button>
+      </div>
+      <div class="help">
+        Gmail ke liye `SMTP Host` = `smtp.gmail.com`, `Port` = `587` rakho.<br>
+        Normal Gmail password nahi, Google ka 16-digit App Password use karo.
+      </div>
+    </form>
+  </section>
+</body>
+</html>

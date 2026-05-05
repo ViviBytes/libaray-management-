@@ -1,0 +1,276 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "password": "admin123"
+    },
+    {
+      "username": "u1",
+      "password": "p1"
+    },
+    {
+      "username": "mamta singh",
+      "password": "mamta"
+    }
+  ],
+  "books": [
+    {
+      "id": 1,
+      "name": "Python Basics",
+      "quantity": 2
+    },
+    {
+      "id": 2,
+      "name": "Advanced Python",
+      "quantity": 5
+    },
+    {
+      "id": 3,
+      "name": "Flask Web Development",
+      "quantity": 5
+    },
+    {
+      "id": 4,
+      "name": "Django for Beginners",
+      "quantity": 5
+    },
+    {
+      "id": 5,
+      "name": "Learning SQL",
+      "quantity": 5
+    },
+    {
+      "id": 6,
+      "name": "Data Structures",
+      "quantity": 5
+    },
+    {
+      "id": 7,
+      "name": "Algorithms Made Easy",
+      "quantity": 5
+    },
+    {
+      "id": 8,
+      "name": "Computer Networks",
+      "quantity": 5
+    },
+    {
+      "id": 9,
+      "name": "Operating Systems",
+      "quantity": 5
+    },
+    {
+      "id": 10,
+      "name": "Clean Code",
+      "quantity": 5
+    },
+    {
+      "id": 11,
+      "name": "Design Patterns",
+      "quantity": 5
+    },
+    {
+      "id": 12,
+      "name": "Java Fundamentals",
+      "quantity": 5
+    },
+    {
+      "id": 13,
+      "name": "C Programming",
+      "quantity": 5
+    },
+    {
+      "id": 14,
+      "name": "C++ Primer",
+      "quantity": 5
+    },
+    {
+      "id": 15,
+      "name": "JavaScript Essentials",
+      "quantity": 5
+    },
+    {
+      "id": 16,
+      "name": "HTML and CSS",
+      "quantity": 5
+    },
+    {
+      "id": 17,
+      "name": "React in Action",
+      "quantity": 5
+    },
+    {
+      "id": 18,
+      "name": "Node.js Guide",
+      "quantity": 5
+    },
+    {
+      "id": 19,
+      "name": "Machine Learning Intro",
+      "quantity": 5
+    },
+    {
+      "id": 20,
+      "name": "Deep Learning Basics",
+      "quantity": 5
+    },
+    {
+      "id": 21,
+      "name": "Artificial Intelligence",
+      "quantity": 5
+    },
+    {
+      "id": 22,
+      "name": "Data Science Handbook",
+      "quantity": 5
+    },
+    {
+      "id": 23,
+      "name": "Statistics 101",
+      "quantity": 5
+    },
+    {
+      "id": 24,
+      "name": "Linear Algebra",
+      "quantity": 5
+    },
+    {
+      "id": 25,
+      "name": "Discrete Mathematics",
+      "quantity": 5
+    },
+    {
+      "id": 26,
+      "name": "Cloud Computing",
+      "quantity": 5
+    },
+    {
+      "id": 27,
+      "name": "DevOps Handbook",
+      "quantity": 5
+    },
+    {
+      "id": 28,
+      "name": "Git and GitHub",
+      "quantity": 5
+    },
+    {
+      "id": 29,
+      "name": "Linux Commands",
+      "quantity": 5
+    },
+    {
+      "id": 30,
+      "name": "Shell Scripting",
+      "quantity": 5
+    },
+    {
+      "id": 31,
+      "name": "Cyber Security Basics",
+      "quantity": 5
+    },
+    {
+      "id": 32,
+      "name": "Ethical Hacking",
+      "quantity": 5
+    },
+    {
+      "id": 33,
+      "name": "Blockchain Concepts",
+      "quantity": 5
+    },
+    {
+      "id": 34,
+      "name": "Mobile App Development",
+      "quantity": 5
+    },
+    {
+      "id": 35,
+      "name": "Android Development",
+      "quantity": 5
+    },
+    {
+      "id": 36,
+      "name": "iOS Development",
+      "quantity": 5
+    },
+    {
+      "id": 37,
+      "name": "Software Testing",
+      "quantity": 5
+    },
+    {
+      "id": 38,
+      "name": "Agile Project Management",
+      "quantity": 5
+    },
+    {
+      "id": 39,
+      "name": "System Design",
+      "quantity": 5
+    },
+    {
+      "id": 40,
+      "name": "Microservices Architecture",
+      "quantity": 5
+    },
+    {
+      "id": 41,
+      "name": "REST API Design",
+      "quantity": 5
+    },
+    {
+      "id": 42,
+      "name": "Database Management",
+      "quantity": 5
+    },
+    {
+      "id": 43,
+      "name": "MongoDB Essentials",
+      "quantity": 5
+    },
+    {
+      "id": 44,
+      "name": "PostgreSQL Guide",
+      "quantity": 5
+    },
+    {
+      "id": 45,
+      "name": "Redis in Practice",
+      "quantity": 5
+    },
+    {
+      "id": 46,
+      "name": "Docker Deep Dive",
+      "quantity": 5
+    },
+    {
+      "id": 47,
+      "name": "Kubernetes Basics",
+      "quantity": 5
+    },
+    {
+      "id": 48,
+      "name": "AWS for Beginners",
+      "quantity": 5
+    },
+    {
+      "id": 49,
+      "name": "Azure Fundamentals",
+      "quantity": 5
+    },
+    {
+      "id": 50,
+      "name": "Google Cloud Platform",
+      "quantity": 5
+    }
+  ],
+  "issued": [
+    {
+      "id": 1,
+      "user": "u1",
+      "book_id": 1,
+      "due_date": "2026-04-04"
+    }
+  ]
+}

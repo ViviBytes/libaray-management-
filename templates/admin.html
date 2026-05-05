@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: linear-gradient(140deg, #eef4ff, #e8f0ff); color: #1f2937; }
+    .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+    .sidebar { background: linear-gradient(170deg, #0f172a, #1e3a8a); color: #fff; padding: 20px; }
+    .sidebar h2 { margin: 0 0 20px; font-size: 22px; }
+    .sidebar a { display: block; color: #e2e8f0; text-decoration: none; padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid transparent; }
+    .sidebar a:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2); }
+    .content { padding: 24px; }
+    .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; }
+    .card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10); border: 1px solid #dbe7ff; }
+    .card h3 { margin: 0; font-size: 15px; color: #6b7280; }
+    .value { margin-top: 10px; font-size: 34px; font-weight: 700; color: #1d4ed8; }
+    .links { margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(170px, 1fr)); gap: 12px; }
+    .go { background: #fff; border: 1px solid #dbe3f5; border-radius: 12px; padding: 14px; text-decoration: none; color: #0f172a; font-weight: 600; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06); }
+    .go:hover { border-color: #1d4ed8; color: #1d4ed8; transform: translateY(-1px); transition: all 0.2s ease; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .cards, .links { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/books">Search & Books</a>
+      <a href="/admin/users">Users</a>
+      <a href="/admin/issues">Issued Books</a>
+      <a href="/logout">Logout</a>
+    </aside>
+    <main class="content">
+      <div class="top">
+        <h1>Admin Dashboard</h1>
+      </div>
+      <section class="cards">
+        <article class="card">
+          <h3>Total Books</h3>
+          <div class="value">{{ total_books }}</div>
+        </article>
+        <article class="card">
+          <h3>Total Users</h3>
+          <div class="value">{{ total_users }}</div>
+        </article>
+        <article class="card">
+          <h3>Issued (Active)</h3>
+          <div class="value">{{ active_issued }}</div>
+        </article>
+      </section>
+      <section class="links">
+        <a class="go" href="/admin/users">Open Users Slide</a>
+        <a class="go" href="/admin/issues">Open Issued Books Slide</a>
+        <a class="go" href="/admin/books">Open Search Books Slide</a>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

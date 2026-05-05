@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #eef3ff; color: #1f2937; }
+    .wrap { max-width: 980px; margin: 24px auto; background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+    a { color: #1d4ed8; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { border: 1px solid #dbe3f5; padding: 9px; text-align: left; }
+    th { background: #f5f8ff; }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="top">
+      <h2>Total Users / Registration History</h2>
+      <a href="/admin">Back Dashboard</a>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>User ID</th><th>Email</th><th>Created</th><th>Detail</th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u[0] }}</td>
+          <td>{{ u[1] }}</td>
+          <td>{{ u[2] or "-" }}</td>
+          <td>{{ u[3] or "-" }}</td>
+          <td><a href="/admin/user/{{ u[1] | urlencode }}">Open Detail Slide</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">No users found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>

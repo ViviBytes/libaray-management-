@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Notifications</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: linear-gradient(145deg, #edf3ff, #e4edff); min-height: 100vh; padding: 24px; color: #1f2937; }
+    .wrap { max-width: 920px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 16px 36px rgba(20, 40, 120, 0.14); overflow: hidden; }
+    .top { padding: 18px 22px; color: #fff; background: linear-gradient(120deg, #0f172a, #2563eb); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .top a { color: #fff; text-decoration: none; margin-left: 12px; font-weight: 600; }
+    .content { padding: 20px; }
+    .summary { margin: 0 0 18px; color: #475569; }
+    .card { border: 1px solid #dbe3f5; border-radius: 14px; padding: 16px; background: #f8fbff; margin-bottom: 12px; }
+    .card.unread { border-color: #93c5fd; background: #eff6ff; }
+    .title { margin: 0 0 6px; font-size: 18px; color: #1d4ed8; }
+    .meta { margin: 0 0 10px; color: #64748b; font-size: 14px; }
+    .message { margin: 0; font-weight: 600; color: #0f172a; }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="top">
+      <h2>Your Notifications</h2>
+      <div>
+        <a href="/home">Home</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+      </div>
+    </div>
+    <div class="content">
+      <p class="summary">
+        {% if unread_request_count %}
+        You have {{ unread_request_count }} new notification(s).
+        {% else %}
+        All notifications are up to date.
+        {% endif %}
+      </p>
+
+      {% for n in notifications %}
+      <article class="card {% if not n['is_seen'] %}unread{% endif %}">
+        <h3 class="title">{{ n["book"] }}</h3>
+        <p class="meta">Requested: {{ n["requested_at"] }} | Available: {{ n["notified_at"] }}</p>
+        <p class="message">{{ n["message"] }}</p>
+      </article>
+      {% else %}
+      <article class="card">
+        <p class="message">No notifications right now.</p>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</body>
+</html>

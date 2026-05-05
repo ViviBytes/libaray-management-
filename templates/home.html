@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Home</title>
+  <style>
+    :root {
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --primary: #1d4ed8;
+      --surface: #ffffff;
+      --line: #d9e1f2;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(145deg, #eff4ff, #e9f1ff);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 16px;
+      box-shadow: 0 16px 34px rgba(10, 30, 100, 0.15);
+      overflow: hidden;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 22px;
+      background: linear-gradient(120deg, #0f172a, #2563eb);
+      color: #fff;
+    }
+    .top h2 { margin: 0; }
+    .top a {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 12px;
+      font-weight: 600;
+    }
+    .notif-link {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .notif-badge {
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .content {
+      padding: 22px;
+    }
+    .panels {
+      display: block;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+    }
+    .panel h3 {
+      margin: 4px 0 12px;
+    }
+    .search {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .search input, .search select {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      font-size: 15px;
+    }
+    .search button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .voice-card {
+      position: relative;
+      margin-bottom: 18px;
+      border: 1px solid #cfe0ff;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #eff6ff, #ffffff 55%);
+      padding: 18px 84px 18px 18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+    .voice-card h4 {
+      margin: 0 0 8px;
+      font-size: 19px;
+    }
+    .voice-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+    }
+    .voice-form { display: block; }
+    .voice-form input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    .voice-btn {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 0;
+      background: radial-gradient(circle at 30% 30%, #60a5fa, #1d4ed8 70%);
+      color: #fff;
+      font-size: 22px;
+      box-shadow: 0 14px 30px rgba(29, 78, 216, 0.28);
+      cursor: pointer;
+    }
+    .voice-btn.listening {
+      animation: pulse 1.2s infinite;
+      background: radial-gradient(circle at 30% 30%, #fb7185, #dc2626 70%);
+    }
+    .voice-status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #334155;
+      min-height: 20px;
+    }
+    .voice-status strong {
+      color: #1d4ed8;
+    }
+    .voice-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .voice-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .voice-overlay-panel {
+      width: min(100%, 560px);
+      background: #fff;
+      border-radius: 22px;
+      padding: 28px 24px;
+      box-shadow: 0 26px 60px rgba(15, 23, 42, 0.28);
+      text-align: center;
+      position: relative;
+    }
+    .voice-overlay-close {
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #0f172a;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .voice-overlay-orb {
+      width: 92px;
+      height: 92px;
+      margin: 0 auto 18px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #60a5fa, #1d4ed8 70%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      box-shadow: 0 14px 34px rgba(29, 78, 216, 0.3);
+    }
+    .voice-overlay-orb.listening {
+      animation: pulse 1.2s infinite;
+      background: radial-gradient(circle at 30% 30%, #fb7185, #dc2626 70%);
+    }
+    .voice-overlay-title {
+      margin: 0 0 10px;
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .voice-overlay-message {
+      margin: 0 0 12px;
+      color: #334155;
+      font-size: 16px;
+      line-height: 1.5;
+      min-height: 48px;
+    }
+    .voice-overlay-heard {
+      min-height: 24px;
+      margin: 0 0 16px;
+      color: #18046e;
+      font-weight: 700;
+    }
+    .voice-overlay-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .voice-overlay-actions button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .voice-overlay-start {
+      background: #1d4ed8;
+      color: #fff;
+    }
+    .voice-overlay-cancel {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .pomodoro-widget {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 35;
+      width: 58px;
+    }
+    .pomodoro-card {
+      position: absolute;
+      top: 70px;
+      right: 0;
+      width: min(360px, calc(100vw - 32px));
+      border: 1px solid #d8d2f7;
+      border-radius: 18px;
+      background: #f7f5dd;
+      padding: 16px 16px 18px;
+      text-align: center;
+      box-shadow: 0 18px 40px rgba(24, 4, 110, 0.24);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(16px) scale(0.96);
+      transform-origin: top right;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    .pomodoro-widget.open .pomodoro-card {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+    .pomodoro-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #334155;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .pomodoro-title {
+      margin: 0 0 10px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .pomodoro-stage {
+      margin: 0 0 14px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 28px;
+      font-weight: 700;
+      color: #000;
+    }
+    .pomodoro-canvas {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      margin: 0 auto 16px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #d8d2f7;
+      background: #f7f5dd url("/assets/image_converted.png") center / cover no-repeat;
+    }
+    .pomodoro-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .pomodoro-display {
+      position: absolute;
+      left: 50%;
+      top: 30%;
+      transform: translate(-50%, -50%);
+      font-family: "Courier New", Courier, monospace;
+      font-size: 40px;
+      font-weight: 700;
+      color: #000;
+      text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+    }
+    .pomodoro-actions {
+      position: absolute;
+      left: 50%;
+      top: 63%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pomodoro-btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 22px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    .pomodoro-btn.start {
+      background: #18046e;
+      color: #fff;
+    }
+    .pomodoro-btn.reset {
+      background: #e2979c;
+      color: #111827;
+    }
+    .pomodoro-checks {
+      position: absolute;
+      left: 50%;
+      top: 77%;
+      transform: translate(-50%, -50%);
+      min-height: 24px;
+      color: #32025f;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      width: 100%;
+    }
+    .pomodoro-toggle {
+      width: 58px;
+      height: 58px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #18046e, #375dfb);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 16px 28px rgba(24, 4, 110, 0.32);
+      font-size: 24px;
+    }
+    @media (max-width: 640px) {
+      .pomodoro-widget {
+        top: 16px;
+        right: 16px;
+        width: 58px;
+      }
+      .pomodoro-display {
+        top: 28%;
+        font-size: 32px;
+      }
+      .pomodoro-actions {
+        top: 65%;
+      }
+      .pomodoro-btn {
+        padding: 9px 18px;
+      }
+      .pomodoro-checks {
+        top: 79%;
+        font-size: 18px;
+      }
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35); }
+      70% { transform: scale(1.04); box-shadow: 0 0 0 16px rgba(220, 38, 38, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+    .count {
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+    .msg {
+      margin: 0 0 10px;
+      color: #0f5132;
+      font-weight: 600;
+    }
+    .not-available {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+    .available {
+      color: #0f5132;
+      font-weight: 600;
+    }
+    .request-btn {
+      border: 0;
+      border-radius: 8px;
+      background: #1d4ed8;
+      color: #fff;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .request-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    .requested-tag {
+      color: #047857;
+      font-weight: 700;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #f5f8ff;
+    }
+  </style>
+</head>
+<body data-username="{{ username or 'User' }}">
+  <section class="wrap">
+    <div class="top">
+      <h2>Library Home</h2>
+      <div>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+      </div>
+    </div>
+
+    <div class="content">
+      {% if message %}
+      <p class="msg">{{ message }}</p>
+      {% endif %}
+      <div class="panels">
+        <section class="panel">
+          <h3>User Panel</h3>
+          <section class="voice-card">
+            <h4>Search through Voice </h4>
+            <p>Click on mic icon and speak.</p>
+            <form class="voice-form" method="get" action="/book-location" id="voiceSearchForm">
+              <input id="voiceQuery" name="query" placeholder="Book name, author, ya barcode likho ya bolo" required>
+              <input id="spokenText" type="hidden" name="spoken">
+            </form>
+            <div class="voice-status" id="voiceStatus">Voice assistant ready. Type or speak to open the location slide automatically.</div>
+            <button type="button" class="voice-btn" id="voiceMicBtn" aria-label="Start voice search" title="Start voice search" onclick="window.__openVoiceAssistant && window.__openVoiceAssistant()">🎤</button>
+          </section>
+
+          <form class="search" method="get" action="/home">
+            <input name="q" value="{{ q }}" placeholder="Search by book name, author, or barcode">
+            <select name="category">
+              <option value="">All Categories</option>
+              {% for c in categories %}
+              <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Search</button>
+          </form>
+
+          <p class="count">Books found: {{ total }}</p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Book Name</th>
+                <th>Author</th>
+                <th>Category</th>
+                <th>Barcode</th>
+                <th>Status</th>
+                <th>Request</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in books %}
+              <tr>
+                <td>{{ b[0] }}</td>
+                <td>{{ b[1] }}</td>
+                <td>{{ b[2] }}</td>
+                <td>{{ b[3] }}</td>
+                <td>{{ b[4] or "-" }}</td>
+                <td>
+                  {% if b[5] == 1 %}
+                  <span class="available">Available</span>
+                  {% else %}
+                  <span class="not-available">Not Available</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if b[5] == 0 %}
+                    {% if b[1] in pending_requests %}
+                    <span class="requested-tag">Requested</span>
+                    {% else %}
+                    <form method="post" action="/home?q={{ q }}&category={{ category }}">
+                      <input type="hidden" name="request_book" value="{{ b[1] }}">
+                      <button class="request-btn" type="submit">Request</button>
+                    </form>
+                    {% endif %}
+                  {% else %}
+                  -
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7">No books matched your search.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+  </section>
+  <div class="voice-overlay" id="voiceOverlay" aria-hidden="true">
+    <div class="voice-overlay-panel">
+      <button type="button" class="voice-overlay-close" id="voiceOverlayClose" aria-label="Close voice assistant">x</button>
+      <div class="voice-overlay-orb" id="voiceOverlayOrb">🎤</div>
+      <div class="voice-overlay-title">Voice Assistant</div>
+      <p class="voice-overlay-message" id="voiceOverlayMessage">Mic start hone par assistant aapko guide karega.</p>
+      <p class="voice-overlay-heard" id="voiceOverlayHeard"></p>
+      <div class="voice-overlay-actions">
+        <button type="button" class="voice-overlay-start" id="voiceOverlayStart">Start Listening</button>
+        <button type="button" class="voice-overlay-cancel" id="voiceOverlayCancel">Close</button>
+      </div>
+    </div>
+  </div>
+  <div class="pomodoro-widget" id="pomodoroWidget">
+    <section class="pomodoro-card" id="pomodoroCard">
+      <button type="button" class="pomodoro-close" id="pomodoroClose" aria-label="Close timer">x</button>
+      <h4 class="pomodoro-title">Pomodoro Timer</h4>
+      <p class="pomodoro-stage" id="pomodoroTitle">Timer</p>
+      <div class="pomodoro-canvas">
+        <img class="pomodoro-image" src="/assets/image_converted.png" alt="Pomodoro background">
+        <div class="pomodoro-display" id="pomodoroDisplay">00:00</div>
+        <div class="pomodoro-actions">
+          <button type="button" class="pomodoro-btn start" id="pomodoroStart">Start</button>
+          <button type="button" class="pomodoro-btn reset" id="pomodoroReset">Reset</button>
+        </div>
+        <div class="pomodoro-checks" id="pomodoroChecks"></div>
+      </div>
+    </section>
+    <button type="button" class="pomodoro-toggle" id="pomodoroToggle" aria-label="Open Pomodoro timer" title="Pomodoro Timer">&#9201;</button>
+  </div>
+  <script>
+    (() => {
+      const micBtn = document.getElementById("voiceMicBtn");
+      const voiceQuery = document.getElementById("voiceQuery");
+      const spokenText = document.getElementById("spokenText");
+      const voiceStatus = document.getElementById("voiceStatus");
+      const voiceForm = document.getElementById("voiceSearchForm");
+      const voiceOverlay = document.getElementById("voiceOverlay");
+      const voiceOverlayClose = document.getElementById("voiceOverlayClose");
+      const voiceOverlayCancel = document.getElementById("voiceOverlayCancel");
+      const voiceOverlayStart = document.getElementById("voiceOverlayStart");
+      const voiceOverlayMessage = document.getElementById("voiceOverlayMessage");
+      const voiceOverlayHeard = document.getElementById("voiceOverlayHeard");
+      const voiceOverlayOrb = document.getElementById("voiceOverlayOrb");
+      const username = document.body.dataset.username || "User";
+      let autoSubmitTimer = null;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let shouldRetryNoSpeech = false;
+      let voiceAssistantOpen = false;
+
+      if (!micBtn || !voiceQuery || !spokenText || !voiceStatus || !voiceForm) {
+        return;
+      }
+
+      const setOverlayOpen = (isOpen) => {
+        if (!voiceOverlay) return;
+        voiceAssistantOpen = isOpen;
+        voiceOverlay.classList.toggle("open", isOpen);
+        voiceOverlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+      };
+
+      const setOverlayMessage = (message, heard = "") => {
+        if (!voiceOverlayMessage || !voiceOverlayHeard) return;
+        voiceOverlayMessage.textContent = message;
+        voiceOverlayHeard.textContent = heard;
+      };
+
+      const speakText = (text, lang = "en-IN") => {
+        if (!("speechSynthesis" in window) || !text) return null;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        window.speechSynthesis.speak(utterance);
+        return utterance;
+      };
+
+      const speakOverlayMessage = (message, lang = "en-IN", heard = "") => {
+        setOverlayMessage(message, heard);
+        return speakText(message, lang);
+      };
+
+      const submitLocator = () => {
+        const value = voiceQuery.value.trim();
+        if (!value) return;
+        voiceForm.requestSubmit();
+      };
+
+      const closeVoiceAssistant = () => {
+        shouldRetryNoSpeech = false;
+        setOverlayOpen(false);
+        if (voiceOverlayOrb) {
+          voiceOverlayOrb.classList.remove("listening");
+        }
+        window.speechSynthesis.cancel();
+        if (recognition) {
+          try {
+            recognition.stop();
+          } catch (error) {
+          }
+        }
+      };
+
+      const startRecognition = () => {
+        if (!recognition) return;
+        spokenText.value = "";
+        voiceQuery.value = "";
+        if (voiceOverlayOrb) {
+          voiceOverlayOrb.classList.add("listening");
+        }
+        voiceStatus.textContent = "Mic start ho raha hai...";
+        setOverlayMessage(`Hi ${username}, please give me book name or its barcode number.`);
+        try {
+          recognition.start();
+        } catch (error) {
+          if (voiceOverlayOrb) {
+            voiceOverlayOrb.classList.remove("listening");
+          }
+          setOverlayMessage("Mic dobara start nahi ho pa raha. Please try again.");
+        }
+      };
+
+      const openVoiceAssistant = () => {
+        setOverlayOpen(true);
+        if (!SpeechRecognition) {
+          setOverlayMessage("Is browser me voice search support nahi hai.", "Chrome ya Edge me try kijiye.");
+          return;
+        }
+        const greeting = `Hi ${username}, please give me book name or its barcode number.`;
+        const utterance = speakOverlayMessage(greeting, "en-IN");
+        if (utterance) {
+          utterance.onend = () => {
+            if (voiceAssistantOpen) {
+              startRecognition();
+            }
+          };
+        } else {
+          window.setTimeout(() => {
+            if (voiceAssistantOpen) {
+              startRecognition();
+            }
+          }, 700);
+        }
+      };
+
+      window.__openVoiceAssistant = openVoiceAssistant;
+
+      if (!SpeechRecognition) {
+        micBtn.disabled = true;
+        micBtn.title = "Voice search not supported";
+        voiceStatus.textContent = "Is browser me voice search support nahi hai. Aap text box se search kar sakte ho.";
+      }
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = "en-IN";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          micBtn.classList.add("listening");
+          if (voiceOverlayOrb) {
+            voiceOverlayOrb.classList.add("listening");
+          }
+          voiceStatus.innerHTML = "<strong>Listening...</strong> Book name, author ya barcode bolo.";
+          setOverlayMessage(`Hi ${username}, please give me book name or its barcode number.`);
+        };
+
+        recognition.onresult = (event) => {
+          shouldRetryNoSpeech = false;
+          const transcript = event.results[0][0].transcript.trim();
+          const transcriptLower = transcript.toLowerCase();
+          const looksHindi = /kaha|kahan|rakha|rakhi|batao|mujhe|hai/i.test(transcript);
+          const wantsPayment = /payment|pay|scanner|fine payment|fees payment/.test(transcriptLower);
+          voiceQuery.value = transcript;
+          spokenText.value = transcript;
+          voiceStatus.innerHTML = `<strong>You said:</strong> ${transcript}`;
+
+          if (wantsPayment) {
+            setOverlayMessage("I heard payment command. Opening payment scanner...", transcript);
+            speakText("Opening payment scanner now.", "en-IN");
+            window.setTimeout(() => {
+              window.location.href = "/dashboard?open_payment=1";
+            }, 500);
+            return;
+          }
+
+          setOverlayMessage("I heard this. Opening book location now...", transcript);
+          if (transcript.length < 2) {
+            voiceStatus.textContent = "Voice suna gaya, lekin clear text nahi mila. Dobara try kijiye.";
+            return;
+          }
+          speakText(
+            looksHindi ? "Aapki book location kholi ja rahi hai." : "Opening your book location now.",
+            looksHindi ? "hi-IN" : "en-IN"
+          );
+          window.setTimeout(() => submitLocator(), 800);
+        };
+
+        recognition.onerror = (event) => {
+          micBtn.classList.remove("listening");
+          if (voiceOverlayOrb) {
+            voiceOverlayOrb.classList.remove("listening");
+          }
+          if (event.error === "no-speech") {
+            shouldRetryNoSpeech = true;
+            voiceStatus.textContent = "Awaaz clear nahi mili. Dobara boliye.";
+            speakOverlayMessage(`Hi ${username}, I could not hear you clearly. Please say the book name or barcode again.`, "en-IN");
+            return;
+          }
+          voiceStatus.textContent = `Voice error: ${event.error}. Dobara try kijiye.`;
+          setOverlayMessage(`Voice error: ${event.error}. Please try again.`);
+        };
+
+        recognition.onend = () => {
+          micBtn.classList.remove("listening");
+          if (voiceOverlayOrb) {
+            voiceOverlayOrb.classList.remove("listening");
+          }
+          if (shouldRetryNoSpeech && voiceAssistantOpen) {
+            shouldRetryNoSpeech = false;
+            window.setTimeout(() => {
+              if (voiceAssistantOpen) {
+                startRecognition();
+              }
+            }, 900);
+          }
+        };
+
+        micBtn.addEventListener("click", () => {
+          openVoiceAssistant();
+        });
+      }
+
+      if (voiceOverlayStart) {
+        voiceOverlayStart.addEventListener("click", () => {
+          startRecognition();
+        });
+      }
+      if (voiceOverlayClose) {
+        voiceOverlayClose.addEventListener("click", closeVoiceAssistant);
+      }
+      if (voiceOverlayCancel) {
+        voiceOverlayCancel.addEventListener("click", closeVoiceAssistant);
+      }
+      if (voiceOverlay) {
+        voiceOverlay.addEventListener("click", (event) => {
+          if (event.target === voiceOverlay) {
+            closeVoiceAssistant();
+          }
+        });
+      }
+
+      voiceQuery.addEventListener("input", () => {
+        spokenText.value = voiceQuery.value.trim();
+        if (autoSubmitTimer) {
+          window.clearTimeout(autoSubmitTimer);
+        }
+        if (voiceQuery.value.trim().length < 2) {
+          voiceStatus.textContent = "Type or speak to open the location slide automatically.";
+          return;
+        }
+        voiceStatus.textContent = "Typing detected. Opening location slide automatically...";
+        autoSubmitTimer = window.setTimeout(() => submitLocator(), 900);
+      });
+
+      voiceForm.addEventListener("submit", () => {
+        if (autoSubmitTimer) {
+          window.clearTimeout(autoSubmitTimer);
+        }
+      });
+    })();
+  </script>
+  <script src="/static/js/home-timer.js?v=4"></script>
+</body>
+</html>

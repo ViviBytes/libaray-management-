@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Detail</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: linear-gradient(140deg, #edf3ff, #e7efff); color: #1f2937; }
+    .wrap { max-width: 1120px; margin: 24px auto; background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 14px 30px rgba(0,0,0,0.10); border: 1px solid #dbe7ff; }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+    a { color: #1d4ed8; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { border: 1px solid #dbe3f5; padding: 9px; text-align: left; }
+    th { background: #eef4ff; }
+    .ok { color: #166534; font-weight: 700; }
+    .pending { color: #92400e; font-weight: 700; }
+    .btn { border: 0; border-radius: 8px; padding: 7px 10px; cursor: pointer; font-weight: 600; background: #1d4ed8; color: #fff; }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="top">
+      <h2>User Detail: {{ selected_user }}</h2>
+      <a href="/admin/users">Back Users Slide</a>
+    </div>
+    <p><strong>Payment details are shown below for each issued book.</strong></p>
+    <table>
+      <thead>
+        <tr><th>Issue ID</th><th>Book</th><th>Issue Date</th><th>Due Date</th><th>Status</th><th>Late Days</th><th>Late Fee</th><th>Paid Amount</th><th>Payment Status</th><th>Paid At</th><th>Returned At</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for d in user_issue_details %}
+        <tr>
+          <td>{{ d["id"] }}</td>
+          <td>{{ d["book"] }}</td>
+          <td>{{ d["issue_date"] }}</td>
+          <td>{{ d["due"] }}</td>
+          <td>{{ d["status"] }}</td>
+          <td>{{ d["days_late"] }}</td>
+          <td>{{ d["late_fee"] }}</td>
+          <td>{{ d["amount_paid"] }}</td>
+          <td>
+            {% if d["payment_status"] == "Paid" %}
+            <span class="ok">Complete</span>
+            {% elif d["payment_status"] == "Pending" %}
+            <span class="pending">Pending Admin Approval</span>
+            {% else %}
+            Unpaid
+            {% endif %}
+          </td>
+          <td>{{ d["paid_at"] }}</td>
+          <td>{{ d["returned_at"] }}</td>
+          <td>
+            {% if d["payment_status"] == "Pending" %}
+            <form method="post" action="/admin/payment/complete/{{ d['id'] }}">
+              <input type="hidden" name="username" value="{{ selected_user }}">
+              <button type="submit" class="btn">Mark Payment Complete</button>
+            </form>
+            {% else %}
+            -
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="12">No issued books for this user.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>

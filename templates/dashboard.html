@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard</title>
+  <style>
+    :root {
+      --bg-grad-1: #edf3ff;
+      --bg-grad-2: #e4edff;
+      --panel-bg: #ffffff;
+      --text-main: #1f2937;
+      --table-head: #f5f8ff;
+    }
+    body.dark-mode {
+      --bg-grad-1: #0b1220;
+      --bg-grad-2: #111827;
+      --panel-bg: #111827;
+      --text-main: #e5e7eb;
+      --table-head: #1f2937;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(145deg, var(--bg-grad-1), var(--bg-grad-2));
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text-main);
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: var(--panel-bg);
+      border-radius: 16px;
+      box-shadow: 0 16px 36px rgba(20, 40, 120, 0.14);
+      overflow: hidden;
+    }
+    .top {
+      padding: 18px 22px;
+      color: #fff;
+      background: linear-gradient(120deg, #0f172a, #2563eb);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .top a {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 12px;
+      font-weight: 600;
+    }
+    .top button {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 24px;
+      margin-left: 12px;
+      transition: transform 0.2s ease;
+    }
+    .top button:hover {
+      transform: scale(1.1);
+    }
+    .timer-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .timer-modal.active {
+      display: flex;
+    }
+    .timer-content {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 16px 36px rgba(20, 40, 120, 0.3);
+      text-align: center;
+      max-width: 600px;
+      width: 90%;
+    }
+    .timer-close {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #666;
+    }
+    .timer-close:hover {
+      color: #000;
+    }
+    .timer-display {
+      font-size: 72px;
+      font-weight: bold;
+      color: #0f172a;
+      margin: 20px 0;
+      font-family: "Courier New", monospace;
+    }
+    .timer-status {
+      font-size: 24px;
+      color: #2563eb;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+    .timer-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .timer-buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .timer-start {
+      background: #0f172a;
+      color: #fff;
+    }
+    .timer-start:hover {
+      background: #1e3a5f;
+    }
+    .timer-reset {
+      background: #ef4444;
+      color: #fff;
+    }
+    .timer-reset:hover {
+      background: #dc2626;
+    }
+    .timer-marks {
+      font-size: 20px;
+      margin-top: 20px;
+      color: #32025F;
+      font-weight: bold;
+    }
+    .notif-badge {
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .content { padding: 18px; }
+    .settings-btn {
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 12px;
+      font-size: 20px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+    .settings-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1100;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .settings-modal.active {
+      display: flex;
+    }
+    .settings-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.3);
+      width: min(640px, 95vw);
+    }
+    .setting-options {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .option-btn {
+      border: 1px solid #cfdaf3;
+      background: #fff;
+      color: #0f172a;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 10px 14px;
+    }
+    .option-btn.active {
+      background: #dbeafe;
+      border-color: #60a5fa;
+      color: #1e3a8a;
+    }
+    .danger-btn {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+    .scanner-box {
+      border: 1px solid #d9e2f2;
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 12px;
+      margin-top: 10px;
+    }
+    .scanner-box img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border: 1px solid #d9e2f2;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .scanner-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    .pay-btn, .close-btn {
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      padding: 10px 14px;
+    }
+    .pay-btn {
+      background: #16a34a;
+      color: #fff;
+    }
+    .close-btn {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .notify {
+      border: 1px solid #fecaca;
+      background: #fff1f2;
+      color: #991b1b;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    th, td {
+      border: 1px solid #d9e2f2;
+      padding: 8px;
+      text-align: left;
+    }
+    th { background: var(--table-head); }
+    .overdue { color: #b91c1c; font-weight: 700; }
+    .ontime { color: #0f5132; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="top">
+      <h2>User Dashboard</h2>
+      <div>
+        <a href="/home">Home</a>
+        <button class="settings-btn" onclick="openSettingsModal()" title="Settings" aria-label="Settings">&#9881;</button>
+        <button onclick="openTimerModal()" title="Pomodoro Timer">⏱️</button>
+        <a href="/logout">Logout</a>
+      </div>
+    </div>
+
+    <!-- Timer Modal -->
+    <div id="timerModal" class="timer-modal">
+      <div class="timer-content">
+        <span class="timer-close" onclick="closeTimerModal()">&times;</span>
+        <h2>Pomodoro Timer</h2>
+        <div class="timer-status" id="timerStatus">Timer</div>
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <div class="timer-marks" id="timerMarks"></div>
+        <div class="timer-buttons">
+          <button class="timer-start" onclick="startTimer()">Start</button>
+          <button class="timer-reset" onclick="resetTimer()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settingsModal" class="settings-modal">
+      <div class="settings-card">
+        <h3>User Settings</h3>
+        <p>Total pending fee/fine: <strong>Rs {{ total_outstanding_fee }}</strong></p>
+        <div class="setting-options">
+          <button id="paymentOptionBtn" type="button" class="option-btn" onclick="showPaymentOption()">Payment</button>
+          <button type="button" class="option-btn" onclick="toggleTheme()">Dark/Light Mode</button>
+          <a href="/notifications" class="option-btn" style="text-decoration:none;">Notifications{% if unread_request_count %} ({{ unread_request_count }}){% endif %}</a>
+          <form method="post" action="/settings/account/delete" onsubmit="return confirm('Account permanently delete hoga. Continue?');" style="margin:0;">
+            <button type="submit" class="option-btn danger-btn">Logout & Delete Account</button>
+          </form>
+        </div>
+        <div id="paymentPanel" class="scanner-box" style="display:none;">
+          <h4>Payment Scanner</h4>
+          <img src="/assets/image_scanner.jpeg" alt="Payment scanner">
+          {% if outstanding_fees %}
+          <p>Payment option par click karte hi scanner open hoga aur pending fine payment ho jayega.</p>
+          <div class="scanner-actions">
+            <form method="post" action="/settings/payment/scan">
+              <button class="pay-btn" type="submit">Open Scanner & Pay</button>
+            </form>
+            <button class="close-btn" type="button" onclick="closeSettingsModal()">Close</button>
+          </div>
+          {% else %}
+          <p>No pending fine. Payment already clear.</p>
+          <button class="close-btn" type="button" onclick="closeSettingsModal()">Close</button>
+          {% endif %}
+          <h4 style="margin-top:14px;">Payment Status</h4>
+          <table>
+            <thead>
+              <tr><th>Book</th><th>Paid Amount</th><th>Status</th><th>Updated At</th></tr>
+            </thead>
+            <tbody>
+              {% for p in payment_records %}
+              <tr>
+                <td>{{ p[1] }}</td>
+                <td>Rs {{ p[2] }}</td>
+                <td>{{ p[3] }}</td>
+                <td>{{ p[4] }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4">No payment records yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <h3>Your Issued Books</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Book</th>
+            <th>Issue Date</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Late Days</th>
+            <th>Late Fee (Rs)</th>
+            <th>Returned At</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in issued %}
+          <tr>
+            <td>{{ i["book"] }}</td>
+            <td>{{ i["issue_date"] }}</td>
+            <td>{{ i["due"] }}</td>
+            <td>
+              {% if i["status"] == "Overdue" %}
+              <span class="overdue">Overdue</span>
+              {% elif i["status"] == "Returned" %}
+              <span class="ontime">Returned</span>
+              {% else %}
+              <span class="ontime">On Time</span>
+              {% endif %}
+            </td>
+            <td>{{ i["days_late"] }}</td>
+            <td>{{ i["late_fee"] }}</td>
+            <td>{{ i["returned_at"] }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7">No issued books yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+    // Pomodoro Timer Configuration
+    const WORK_MIN = 1;
+    const SHORT_BREAK_MIN = 5;
+    const LONG_BREAK_MIN = 20;
+    
+    let reps = 0;
+    let timerActive = false;
+    let timerIntervalId = null;
+    let currentCount = 0;
+
+    function openTimerModal() {
+      document.getElementById('timerModal').classList.add('active');
+      updateTimerDisplay();
+    }
+
+    function closeTimerModal() {
+      document.getElementById('timerModal').classList.remove('active');
+      if (timerIntervalId) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+      }
+      timerActive = false;
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(currentCount / 60);
+      const seconds = currentCount % 60;
+      const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      document.getElementById('timerDisplay').textContent = display;
+    }
+
+    function countDown(count) {
+      currentCount = count;
+      updateTimerDisplay();
+      
+      if (count > 0) {
+        timerIntervalId = setTimeout(() => countDown(count - 1), 1000);
+      } else {
+        startTimer();
+        const workSessions = Math.floor(reps / 2);
+        let marks = ' ';
+        for (let i = 0; i < workSessions; i++) {
+          marks += '✓ ';
+        }
+        document.getElementById('timerMarks').textContent = marks;
+      }
+    }
+
+    function startTimer() {
+      if (timerActive) return;
+      
+      timerActive = true;
+      reps += 1;
+
+      const workSec = WORK_MIN * 60;
+      const shortBreakSec = SHORT_BREAK_MIN * 60;
+      const longBreakSec = LONG_BREAK_MIN * 60;
+
+      let count;
+      let statusText;
+      let statusColor;
+
+      if (reps % 8 === 0) {
+        count = longBreakSec;
+        statusText = 'Long Break';
+        statusColor = '#ef4444';
+      } else if (reps % 2 === 0) {
+        count = shortBreakSec;
+        statusText = 'Short Break';
+        statusColor = '#e2979c';
+      } else {
+        count = workSec;
+        statusText = 'Work';
+        statusColor = '#18046e';
+      }
+
+      document.getElementById('timerStatus').textContent = statusText;
+      document.getElementById('timerStatus').style.color = statusColor;
+      
+      countDown(count);
+    }
+
+    function resetTimer() {
+      timerActive = false;
+      if (timerIntervalId) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+      }
+      currentCount = 0;
+      reps = 0;
+      document.getElementById('timerDisplay').textContent = '00:00';
+      document.getElementById('timerStatus').textContent = 'Timer';
+      document.getElementById('timerStatus').style.color = '#2563eb';
+      document.getElementById('timerMarks').textContent = '';
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settingsModal').classList.add('active');
+      const panel = document.getElementById('paymentPanel');
+      const paymentBtn = document.getElementById('paymentOptionBtn');
+      if (panel) {
+        panel.style.display = 'none';
+      }
+      if (paymentBtn) {
+        paymentBtn.classList.remove('active');
+      }
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('active');
+    }
+
+    function showPaymentOption() {
+      const panel = document.getElementById('paymentPanel');
+      const paymentBtn = document.getElementById('paymentOptionBtn');
+      if (panel) {
+        panel.style.display = 'block';
+      }
+      if (paymentBtn) {
+        paymentBtn.classList.add('active');
+      }
+    }
+
+    const autoOpenPayment = new URLSearchParams(window.location.search).get('open_payment');
+    if (autoOpenPayment === '1') {
+      openSettingsModal();
+      showPaymentOption();
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('DOMContentLoaded', function() {
+      const savedTheme = localStorage.getItem('dashboard_theme');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+      }
+      document.getElementById('timerModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+          closeTimerModal();
+        }
+      });
+      document.getElementById('settingsModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+          closeSettingsModal();
+        }
+      });
+    });
+
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('dashboard_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    }
+  </script>
+</body>
+</html>

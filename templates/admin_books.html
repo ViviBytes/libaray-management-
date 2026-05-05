@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Books</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: #eef3ff; color: #1f2937; }
+    .wrap { max-width: 1080px; margin: 24px auto; background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+    a { color: #1d4ed8; text-decoration: none; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    form { border: 1px solid #dbe3f5; border-radius: 10px; padding: 12px; background: #f8faff; }
+    input, button { padding: 10px; border-radius: 8px; border: 1px solid #d3dcf3; width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+    select { padding: 10px; border-radius: 8px; border: 1px solid #d3dcf3; width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+    button { border: 0; background: #1d4ed8; color: #fff; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { border: 1px solid #dbe3f5; padding: 9px; text-align: left; }
+    th { background: #f5f8ff; }
+    .danger { color: #b91c1c; text-decoration: none; }
+    .mini-form { min-width: 270px; }
+    .mini-form input { margin-bottom: 6px; }
+    .mini-form button { margin-bottom: 0; background: #0f766e; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="top">
+      <h2>Search Books / Manage Books</h2>
+      <a href="/admin">Back Dashboard</a>
+    </div>
+    <div class="grid">
+      <form method="get" action="/admin/books">
+        <h3>Search Books</h3>
+        <input name="q" value="{{ q }}" placeholder="Search by book or author">
+        <select name="category">
+          <option value="">All Categories</option>
+          {% for c in categories %}
+          <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Search</button>
+      </form>
+      <form method="post" action="/admin/books">
+        <h3>Add New Book</h3>
+        <input type="hidden" name="form_action" value="add_book">
+        <input name="book" placeholder="Book name" required>
+        <input name="author" placeholder="Author name" required>
+        <input name="barcode" placeholder="Barcode number">
+        <input name="shelf" placeholder="Shelf number or name">
+        <input name="shelf_row" placeholder="Row">
+        <input name="shelf_column" placeholder="Column">
+        <select name="category" required>
+          {% for c in categories %}
+          <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Add Book</button>
+      </form>
+      <form method="get" action="/admin/book-location" target="_blank">
+        <h3>Find Book By Barcode</h3>
+        <input name="barcode" placeholder="Enter barcode number" required>
+        <p style="margin: 0 0 10px; color: #475569; font-size: 14px;">Result ek naye slide/page me khulega aur exact location dikhayega.</p>
+        <button type="submit">Open Location Slide</button>
+      </form>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Book</th><th>Author</th><th>Category</th><th>Barcode</th><th>Location</th><th>Update Location</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for b in books %}
+        <tr>
+          <td>{{ b[0] }}</td>
+          <td>{{ b[1] }}</td>
+          <td>{{ b[2] or "Unknown" }}</td>
+          <td>{{ b[3] or "Fiction" }}</td>
+          <td>{{ b[4] or "-" }}</td>
+          <td>Shelf {{ b[5] or "-" }}, Row {{ b[6] or "-" }}, Column {{ b[7] or "-" }}</td>
+          <td>
+            <form method="post" action="/admin/books" class="mini-form">
+              <input type="hidden" name="form_action" value="update_location">
+              <input type="hidden" name="book_id" value="{{ b[0] }}">
+              <input name="barcode" value="{{ b[4] }}" placeholder="Barcode">
+              <input name="shelf" value="{{ b[5] }}" placeholder="Shelf">
+              <input name="shelf_row" value="{{ b[6] }}" placeholder="Row">
+              <input name="shelf_column" value="{{ b[7] }}" placeholder="Column">
+              <button type="submit">Save</button>
+            </form>
+          </td>
+          <td><a class="danger" href="/delete/{{ b[0] }}">Delete</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8">No books found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>
