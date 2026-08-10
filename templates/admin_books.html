@@ -10,10 +10,13 @@
     .top { display: flex; justify-content: space-between; align-items: center; }
     a { color: #1d4ed8; text-decoration: none; }
     .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
-    form { border: 1px solid #dbe3f5; border-radius: 10px; padding: 12px; background: #f8faff; }
-    input, button { padding: 10px; border-radius: 8px; border: 1px solid #d3dcf3; width: 100%; margin-bottom: 8px; box-sizing: border-box; }
-    select { padding: 10px; border-radius: 8px; border: 1px solid #d3dcf3; width: 100%; margin-bottom: 8px; box-sizing: border-box; }
-    button { border: 0; background: #1d4ed8; color: #fff; font-weight: 600; }
+    form { border: 1px solid #dbe3f5; border-radius: 16px; padding: 18px; background: #f8faff; }
+    input, button, select { padding: 12px 14px; border-radius: 12px; border: 1px solid #d3dcf3; width: 100%; margin-bottom: 10px; box-sizing: border-box; font-size: 14px; }
+    input[type="file"] { padding: 10px 12px; }
+    button { border: 0; background: #1d4ed8; color: #fff; font-weight: 600; transition: transform 0.2s ease; cursor: pointer; }
+    button:hover { transform: translateY(-1px); }
+    .cover-thumb { width: 64px; height: 88px; object-fit: cover; border-radius: 10px; border: 1px solid #dbe3f5; }
+    .cover-placeholder { width: 64px; height: 88px; display: grid; place-items: center; background: #eef3ff; color: #475569; border-radius: 10px; border: 1px solid #dbe3f5; font-size: 12px; text-align: center; padding: 8px; }
     table { width: 100%; border-collapse: collapse; margin-top: 14px; }
     th, td { border: 1px solid #dbe3f5; padding: 9px; text-align: left; }
     th { background: #f5f8ff; }
@@ -42,7 +45,7 @@
         </select>
         <button type="submit">Search</button>
       </form>
-      <form method="post" action="/admin/books">
+      <form method="post" action="/admin/books" enctype="multipart/form-data">
         <h3>Add New Book</h3>
         <input type="hidden" name="form_action" value="add_book">
         <input name="book" placeholder="Book name" required>
@@ -51,6 +54,7 @@
         <input name="shelf" placeholder="Shelf number or name">
         <input name="shelf_row" placeholder="Row">
         <input name="shelf_column" placeholder="Column">
+        <input type="file" name="cover_image" accept="image/*">
         <select name="category" required>
           {% for c in categories %}
           <option value="{{ c }}">{{ c }}</option>
@@ -67,12 +71,19 @@
     </div>
     <table>
       <thead>
-        <tr><th>ID</th><th>Book</th><th>Author</th><th>Category</th><th>Barcode</th><th>Location</th><th>Update Location</th><th>Action</th></tr>
+        <tr><th>ID</th><th>Cover</th><th>Book</th><th>Author</th><th>Category</th><th>Barcode</th><th>Location</th><th>Update Location</th><th>Action</th></tr>
       </thead>
       <tbody>
         {% for b in books %}
         <tr>
           <td>{{ b[0] }}</td>
+          <td>
+            {% if b[8] %}
+            <img src="/static/{{ b[8] }}" alt="{{ b[1] }} cover" class="cover-thumb">
+            {% else %}
+            <div class="cover-placeholder">No cover</div>
+            {% endif %}
+          </td>
           <td>{{ b[1] }}</td>
           <td>{{ b[2] or "Unknown" }}</td>
           <td>{{ b[3] or "Fiction" }}</td>
@@ -92,7 +103,7 @@
           <td><a class="danger" href="/delete/{{ b[0] }}">Delete</a></td>
         </tr>
         {% else %}
-        <tr><td colspan="8">No books found.</td></tr>
+        <tr><td colspan="9">No books found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

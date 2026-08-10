@@ -8,13 +8,17 @@ from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 from difflib import SequenceMatcher
 
-
+from werkzeug.utils import secure_filename
+import uuid
 import re
+import urllib.request
+import urllib.parse
 
 app = Flask(__name__)
 app.secret_key = "secret"
 
 DB_PATH = os.path.join(os.environ.get("LOCALAPPDATA", "."), "library_management.db")
+COVER_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "book_covers")
 LATE_FEE_PER_DAY = 5
 ISSUE_PERIOD_DAYS = 15
 CATEGORIES = ("Fiction", "Self-help", "Education", "Technology")
@@ -93,6 +97,604 @@ def infer_category(title):
         return "Education"
     return "Fiction"
 
+
+def save_book_cover(uploaded_file):
+    if not uploaded_file or not uploaded_file.filename:
+        return None
+    filename = secure_filename(uploaded_file.filename)
+    if not filename:
+        return None
+    extension = os.path.splitext(filename)[1].lower()
+    if extension not in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
+        return None
+    os.makedirs(COVER_FOLDER, exist_ok=True)
+    unique_name = f"{uuid.uuid4().hex}{extension}"
+    target_path = os.path.join(COVER_FOLDER, unique_name)
+    uploaded_file.save(target_path)
+    return f"book_covers/{unique_name}"
+
+
+def _openlibrary_cover_url(doc):
+    cover_id = doc.get("cover_i")
+    if cover_id:
+        return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+
+    edition_key = doc.get("cover_edition_key") or (doc.get("edition_key") or [])
+    if edition_key:
+        if isinstance(edition_key, list):
+            edition_key = edition_key[0]
+        if edition_key:
+            return f"https://covers.openlibrary.org/b/olid/{urllib.parse.quote_plus(str(edition_key))}-L.jpg"
+
+    isbns = doc.get("isbn") or []
+    if isbns:
+        return f"https://covers.openlibrary.org/b/isbn/{urllib.parse.quote_plus(str(isbns[0]))}-L.jpg"
+
+    return None
+
+
+def fetch_cover_from_openlibrary(title, author):
+    """Try to find a cover image via OpenLibrary search and save it locally.
+    Returns relative path like 'book_covers/xxx.jpg' or None.
+    """
+    def _search(query_url):
+        with urllib.request.urlopen(query_url, timeout=15) as resp:
+            data = json.load(resp)
+        docs = data.get("docs", []) if isinstance(data, dict) else []
+        if not docs:
+            return None
+        return _openlibrary_cover_url(docs[0])
+
+    try:
+        q_title = urllib.parse.quote_plus(title or "")
+        q_author = urllib.parse.quote_plus(author or "")
+        url = f"https://openlibrary.org/search.json?title={q_title}&author={q_author}&limit=1"
+        cover_url = _search(url)
+        if not cover_url and q_title:
+            url = f"https://openlibrary.org/search.json?title={q_title}&limit=1"
+            cover_url = _search(url)
+
+        if cover_url:
+            os.makedirs(COVER_FOLDER, exist_ok=True)
+            ext = os.path.splitext(urllib.parse.urlparse(cover_url).path)[1] or ".jpg"
+            unique_name = f"{uuid.uuid4().hex}{ext}"
+            target_path = os.path.join(COVER_FOLDER, unique_name)
+            try:
+                urllib.request.urlretrieve(cover_url, target_path)
+                return f"book_covers/{unique_name}"
+            except Exception:
+                return None
+    except Exception:
+        return None
+    return None
+
+
+@app.route('/admin/seed_books', methods=['POST'])
+def admin_seed_books():
+    if not admin_required():
+        return redirect('/login')
+
+    # Full curated list provided by user (will be inserted when seeding)
+    seed_list = [
+        ("Don Quixote", "Miguel de Cervantes"),
+        ("Alice's Adventures in Wonderland", "Lewis Carroll"),
+        ("The Adventures of Huckleberry Finn", "Mark Twain"),
+        ("The Adventures of Tom Sawyer", "Mark Twain"),
+        ("Treasure Island", "Robert Louis Stevenson"),
+        ("Pride and Prejudice", "Jane Austen"),
+        ("Wuthering Heights", "Emily Brontë"),
+        ("Jane Eyre", "Charlotte Brontë"),
+        ("Moby Dick", "Herman Melville"),
+        ("The Scarlet Letter", "Nathaniel Hawthorne"),
+        ("Gulliver's Travels", "Jonathan Swift"),
+        ("The Pilgrim's Progress", "John Bunyan"),
+        ("A Christmas Carol", "Charles Dickens"),
+        ("David Copperfield", "Charles Dickens"),
+        ("A Tale of Two Cities", "Charles Dickens"),
+        ("Little Women", "Louisa May Alcott"),
+        ("Great Expectations", "Charles Dickens"),
+        ("The Hobbit, or, There and Back Again", "J.R.R. Tolkien"),
+        ("Frankenstein, or, the Modern Prometheus", "Mary Shelley"),
+        ("Oliver Twist", "Charles Dickens"),
+        ("Uncle Tom's Cabin", "Harriet Beecher Stowe"),
+        ("Crime and Punishment", "Fyodor Dostoyevsky"),
+        ("Madame Bovary: Patterns of Provincial life", "Gustave Flaubert"),
+        ("The Return of the King", "J.R.R. Tolkien"),
+        ("Dracula", "Bram Stoker"),
+        ("The Three Musketeers", "Alexandre Dumas"),
+        ("Brave New World", "Aldous Huxley"),
+        ("War and Peace", "Leo Tolstoy"),
+        ("To Kill a Mockingbird", "Harper Lee"),
+        ("The Wizard of Oz", "L. Frank Baum"),
+        ("Les Misérables", "Victor Hugo"),
+        ("The Secret Garden", "Frances Hodgson Burnett"),
+        ("Animal Farm", "George Orwell"),
+        ("The Great Gatsby", "F. Scott Fitzgerald"),
+        ("The Little Prince", "Antoine de Saint-Exupéry"),
+        ("The Call of the Wild", "Jack London"),
+        ("20,000 Leagues Under the Sea", "Jules Verne"),
+        ("Anna Karenina", "Leo Tolstoy"),
+        ("The Wind in the Willows", "Kenneth Grahame"),
+        ("The Picture of Dorian Gray", "Oscar Wilde"),
+        ("The Grapes of Wrath", "John Steinbeck"),
+        ("Sense and Sensibility", "Jane Austen"),
+        ("The Last of the Mohicans", "James Fenimore Cooper"),
+        ("Tess of the d'Urbervilles", "Thomas Hardy"),
+        ("Harry Potter and the Sorcerer's Stone", "J.K. Rowling"),
+        ("Heidi", "Johanna Spyri"),
+        ("Ulysses", "James Joyce"),
+        ("The Complete Sherlock Holmes", "Arthur Conan Doyle"),
+        ("The Count of Monte Cristo", "Alexandre Dumas"),
+        ("The Old Man and the Sea", "Ernest Hemingway"),
+        ("The Lion, the Witch, and the Wardrobe", "C.S. Lewis"),
+        ("The Hunchback of Notre Dame", "Victor Hugo"),
+        ("Pinocchio", "Carlo Collodi"),
+        ("One Hundred Years of Solitude", "Gabriel García Márquez"),
+        ("Ivanhoe", "Walter Scott"),
+        ("The Red Badge of Courage", "Stephen Crane"),
+        ("Anne of Green Gables", "L.M. Montgomery"),
+        ("Black Beauty", "Anna Sewell"),
+        ("Peter Pan", "J.M. Barrie"),
+        ("A Farewell to Arms", "Ernest Hemingway"),
+        ("The House of the Seven Gables", "Nathaniel Hawthorne"),
+        ("Lord of the Flies", "William Golding"),
+        ("The Prince and the Pauper", "Mark Twain"),
+        ("A Portrait of the Artist as a Young Man", "James Joyce"),
+        ("Lord Jim", "Joseph Conrad"),
+        ("Harry Potter and the Chamber of Secrets", "J.K. Rowling"),
+        ("The Red & the Black", "Stendhal"),
+        ("The Stranger", "Albert Camus"),
+        ("The Trial", "Franz Kafka"),
+        ("Lady Chatterley's Lover", "D.H. Lawrence"),
+        ("Kidnapped: The Adventures of David Balfour", "Robert Louis Stevenson"),
+        ("The Catcher in the Rye", "J.D. Salinger"),
+        ("Fahrenheit 451", "Ray Bradbury"),
+        ("A Journey to the Center of the Earth", "Jules Verne"),
+        ("Vanity Fair", "William Makepeace Thackeray"),
+        ("All Quiet on the Western Front", "Erich Maria Remarque"),
+        ("Gone with the Wind", "Margaret Mitchell"),
+        ("My Ántonia", "Willa Cather"),
+        ("Of Mice and Men", "John Steinbeck"),
+        ("The Vicar of Wakefield", "Oliver Goldsmith"),
+        ("A Connecticut Yankee in King Arthur's Court", "Mark Twain"),
+        ("White Fang", "Jack London"),
+        ("Fathers and Sons", "Ivan Sergeevich Turgenev"),
+        ("Doctor Zhivago", "Boris Leonidovich Pasternak"),
+        ("The Decameron", "Giovanni Boccaccio"),
+        ("Nineteen Eighty-Four", "George Orwell"),
+        ("The Jungle", "Upton Sinclair"),
+        ("The Da Vinci Code", "Dan Brown"),
+        ("Persuasion", "Jane Austen"),
+        ("Mansfield Park", "Jane Austen"),
+        ("Candide", "Voltaire"),
+        ("For Whom the Bell Tolls", "Ernest Hemingway"),
+        ("Far from the Madding Crowd", "Thomas Hardy"),
+        ("The Fellowship of the Ring", "J.R.R. Tolkien"),
+        ("The Return of the Native", "Thomas Hardy"),
+        ("Sons and Lovers", "D.H. Lawrence"),
+        ("Charlotte's Web", "E.B. White"),
+        ("The Swiss Family Robinson", "Johann David Wyss"),
+        ("Bleak House", "Charles Dickens"),
+        ("Père Goriot", "Honoré de Balzac"),
+        ("Utopia", "Thomas More"),
+        ("The History of Tom Jones, a Foundling", "Henry Fielding"),
+        ("Harry Potter and the Prisoner of Azkaban", "J.K. Rowling"),
+        ("Kim", "Rudyard Kipling"),
+        ("The Sound and the Fury", "William Faulkner"),
+        ("Harry Potter and the Goblet of Fire", "J.K. Rowling"),
+        ("The Mill on the Floss", "George Eliot"),
+        ("A Wrinkle in Time", "Madeleine L'Engle"),
+        ("The Hound of the Baskervilles", "Arthur Conan Doyle"),
+        ("The Two Towers", "J.R.R. Tolkien"),
+        ("The War of the Worlds", "H.G. Wells"),
+        ("Middlemarch", "George Eliot"),
+        ("The Age of Innocence", "Edith Wharton"),
+        ("The Color Purple", "Alice Walker"),
+        ("Northanger Abbey", "Jane Austen"),
+        ("East of Eden", "John Steinbeck"),
+        ("On the Road", "Jack Kerouac"),
+        ("Catch-22", "Joseph Heller"),
+        ("Around the World in Eighty Days", "Jules Verne"),
+        ("Hard Times", "Charles Dickens"),
+        ("Beloved", "Toni Morrison"),
+        ("Mrs. Dalloway", "Virginia Woolf"),
+        ("To the Lighthouse", "Virginia Woolf"),
+        ("The Magician's Nephew", "C.S. Lewis"),
+        ("Harry Potter and the Order of the Phoenix", "J.K. Rowling"),
+        ("The Sun Also Rises", "Ernest Hemingway"),
+        ("The Good Earth", "Pearl S. Buck"),
+        ("Silas Marner", "George Eliot"),
+        ("Love in the Time of Cholera", "Gabriel García Márquez"),
+        ("Rebecca", "Daphne Du Maurier"),
+        ("Jude the Obscure", "Thomas Hardy"),
+        ("Twilight", "Stephenie Meyer"),
+        ("A Passage to India", "E.M. Forster"),
+        ("The Plague", "Albert Camus"),
+        ("Nicholas Nickleby", "Charles Dickens"),
+        ("The Pearl", "John Steinbeck"),
+        ("Ethan Frome", "Edith Wharton"),
+        ("The Tale of Genji", "Murasaki Shikibu"),
+        ("The Giver", "Lois Lowry"),
+        ("The Alchemist", "Paulo Coelho"),
+        ("The Strange Case of Dr. Jekyll and Mr. Hyde", "Robert Louis Stevenson"),
+        ("Robinson Crusoe", "Daniel Defoe"),
+        ("Tender is the Night", "F. Scott Fitzgerald"),
+        ("The Idiot", "Fyodor Dostoyevsky"),
+        ("Hatchet", "Gary Paulsen"),
+        ("The Kite Runner", "Khaled Hosseini"),
+        ("One Flew Over the Cuckoo's Nest", "Ken Kesey"),
+        ("The Portrait of a Lady", "Henry James"),
+        ("The Outsiders", "S.E. Hinton"),
+        ("Ben-Hur", "Lew Wallace"),
+        ("The Mayor of Casterbridge", "Thomas Hardy"),
+        ("Cry, The Beloved Country", "Alan Paton"),
+        ("The Last Battle", "C.S. Lewis"),
+        ("Captains Courageous", "Rudyard Kipling"),
+        ("The Castle", "Franz Kafka"),
+        ("The Metamorphosis", "Franz Kafka"),
+        ("The Magic Mountain (Der Zauberberg)", "Thomas Mann"),
+        ("James and the Giant Peach", "Roald Dahl"),
+        ("The Horse and His Boy", "C.S. Lewis"),
+        ("Angels &amp; Demons", "Dan Brown"),
+        ("The Voyage of the Dawn Treader", "C.S. Lewis"),
+        ("The Bell Jar", "Sylvia Plath"),
+        ("Women in Love", "D.H. Lawrence"),
+        ("The Yearling", "Marjorie Kinnan Rawlings"),
+        ("O Pioneers!", "Willa Cather"),
+        ("The Handmaid's Tale", "Margaret Atwood"),
+        ("The Moonstone", "Wilkie Collins"),
+        ("The Old Curiosity Shop", "Charles Dickens"),
+        ("Little Dorrit", "Charles Dickens"),
+        ("Prince Caspian: The Return to Narnia", "C.S. Lewis"),
+        ("Sister Carrie", "Theodore Dreiser"),
+        ("The Silver Chair", "C.S. Lewis"),
+        ("The Hunger Games", "Suzanne Collins"),
+        ("This Side of Paradise", "F. Scott Fitzgerald"),
+        ("Eugénie Grandet", "Honoré de Balzac"),
+        ("Of Human Bondage", "W. Somerset Maugham"),
+        ("Dream of the Red Chamber", "Cao Xueqin"),
+        ("Life of Pi", "Yann Martel"),
+        ("Harry Potter and the Deathly Hallows", "J.K. Rowling"),
+        ("Invisible Man", "Ralph Ellison"),
+        ("Steppenwolf", "Hermann Hesse"),
+        ("The Sorrows of Young Werther", "Johann Wolfgang von Goethe"),
+        ("Bridge to Terabithia", "Katherine Paterson"),
+        ("The Invisible Man", "H.G. Wells"),
+        ("Holes", "Louis Sachar"),
+        ("Siddhartha", "Hermann Hesse"),
+        ("A Tree Grows in Brooklyn", "Betty Smith"),
+        ("Through the Looking-Glass, and What Alice Found There", "Lewis Carroll"),
+        ("In Cold Blood", "Truman Capote"),
+        ("The House of the Spirits", "Isabel Allende"),
+        ("Adam Bede", "George Eliot"),
+        ("The Betrothed", "Alessandro Manzoni"),
+        ("The Book Thief", "Markus Zusak"),
+        ("Their Eyes Were Watching God", "Zora Neale Hurston"),
+        ("One Day in the Life of Ivan Denisovich", "Aleksandr Isaevich Solzhenitsyn"),
+        ("The Sea Wolf", "Jack London"),
+        ("Catching Fire", "Suzanne Collins"),
+        ("Roll of Thunder, Hear My Cry", "Mildred D. Taylor"),
+        ("Death Comes for the Archbishop", "Willa Cather"),
+        ("The House of Mirth", "Edith Wharton"),
+        ("Light in August", "William Faulkner"),
+        ("The Pickwick Papers", "Charles Dickens"),
+        ("Remembrance of Things Past", "Marcel Proust"),
+        ("Barchester Towers and the Warden", "Anthony Trollope"),
+        ("The Bridge of San Luis Rey", "Thornton Wilder"),
+        ("The Help", "Kathryn Stockett"),
+        ("Murder on the Orient Express", "Agatha Christie"),
+        ("The Lovely Bones", "Alice Sebold"),
+        ("The Appeal", "John Grisham"),
+        ("Dombey And Son", "Charles Dickens"),
+        ("Slaughterhouse-Five", "Kurt Vonnegut"),
+        ("An American Tragedy", "Theodore Dreiser"),
+        ("The Bluest Eye", "Toni Morrison"),
+        ("Little House In the Big Woods", "Laura Ingalls Wilder"),
+        ("Pippi Longstocking", "Astrid Lindgren"),
+        ("Germinal", "Émile Zola"),
+        ("The Heart Is a Lonely Hunter", "Carson McCullers"),
+        ("The Woman In White", "Wilkie Collins"),
+        ("Absalom, Absalom!", "William Faulkner"),
+        ("A Painted House", "John Grisham"),
+        ("The Girl With the Dragon Tattoo", "Stieg Larsson"),
+        ("A Room With a View", "E.M. Forster"),
+        ("Watership Down", "Richard Adams"),
+        ("Memoirs of a Geisha", "Arthur Golden"),
+        ("Our Mutual Friend", "Charles Dickens"),
+        ("Babbitt", "Sinclair Lewis"),
+        ("The Red Pony", "John Steinbeck"),
+    ]
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    # Remove existing books
+    cur.execute("DELETE FROM books")
+    conn.commit()
+
+    for name, author in seed_list:
+        category = infer_category(name)
+        cover = fetch_cover_from_openlibrary(name, author)
+        cur.execute(
+            "INSERT INTO books(name, author, category, cover_image) VALUES(?,?,?,?)",
+            (name, author, category, cover),
+        )
+        conn.commit()
+
+    conn.close()
+    return redirect('/admin?notice=' + quote_plus('Seeded books and downloaded available covers.'))
+
+
+def download_missing_book_covers(limit=None):
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, author FROM books WHERE COALESCE(cover_image, '')='' ORDER BY name")
+    rows = cur.fetchall()
+    if limit is not None:
+        rows = rows[:limit]
+    total = len(rows)
+    downloaded = 0
+    failed = 0
+    for book_id, name, author in rows:
+        cover = fetch_cover_from_openlibrary(name, author)
+        if cover:
+            cur.execute("UPDATE books SET cover_image=? WHERE id=?", (cover, book_id))
+            conn.commit()
+            downloaded += 1
+        else:
+            failed += 1
+    conn.close()
+    return total, downloaded, failed
+
+
+def seed_books_now():
+    """Non-route helper to seed the DB immediately. Returns number of books inserted."""
+    seed_list = [
+        ("Don Quixote", "Miguel de Cervantes"),
+        ("Alice's Adventures in Wonderland", "Lewis Carroll"),
+        ("The Adventures of Huckleberry Finn", "Mark Twain"),
+        ("The Adventures of Tom Sawyer", "Mark Twain"),
+        ("Treasure Island", "Robert Louis Stevenson"),
+        ("Pride and Prejudice", "Jane Austen"),
+        ("Wuthering Heights", "Emily Brontë"),
+        ("Jane Eyre", "Charlotte Brontë"),
+        ("Moby Dick", "Herman Melville"),
+        ("The Scarlet Letter", "Nathaniel Hawthorne"),
+        ("Gulliver's Travels", "Jonathan Swift"),
+        ("The Pilgrim's Progress", "John Bunyan"),
+        ("A Christmas Carol", "Charles Dickens"),
+        ("David Copperfield", "Charles Dickens"),
+        ("A Tale of Two Cities", "Charles Dickens"),
+        ("Little Women", "Louisa May Alcott"),
+        ("Great Expectations", "Charles Dickens"),
+        ("The Hobbit, or, There and Back Again", "J.R.R. Tolkien"),
+        ("Frankenstein, or, the Modern Prometheus", "Mary Shelley"),
+        ("Oliver Twist", "Charles Dickens"),
+        ("Uncle Tom's Cabin", "Harriet Beecher Stowe"),
+        ("Crime and Punishment", "Fyodor Dostoyevsky"),
+        ("Madame Bovary: Patterns of Provincial life", "Gustave Flaubert"),
+        ("The Return of the King", "J.R.R. Tolkien"),
+        ("Dracula", "Bram Stoker"),
+        ("The Three Musketeers", "Alexandre Dumas"),
+        ("Brave New World", "Aldous Huxley"),
+        ("War and Peace", "Leo Tolstoy"),
+        ("To Kill a Mockingbird", "Harper Lee"),
+        ("The Wizard of Oz", "L. Frank Baum"),
+        ("Les Misérables", "Victor Hugo"),
+        ("The Secret Garden", "Frances Hodgson Burnett"),
+        ("Animal Farm", "George Orwell"),
+        ("The Great Gatsby", "F. Scott Fitzgerald"),
+        ("The Little Prince", "Antoine de Saint-Exupéry"),
+        ("The Call of the Wild", "Jack London"),
+        ("20,000 Leagues Under the Sea", "Jules Verne"),
+        ("Anna Karenina", "Leo Tolstoy"),
+        ("The Wind in the Willows", "Kenneth Grahame"),
+        ("The Picture of Dorian Gray", "Oscar Wilde"),
+        ("The Grapes of Wrath", "John Steinbeck"),
+        ("Sense and Sensibility", "Jane Austen"),
+        ("The Last of the Mohicans", "James Fenimore Cooper"),
+        ("Tess of the d'Urbervilles", "Thomas Hardy"),
+        ("Harry Potter and the Sorcerer's Stone", "J.K. Rowling"),
+        ("Heidi", "Johanna Spyri"),
+        ("Ulysses", "James Joyce"),
+        ("The Complete Sherlock Holmes", "Arthur Conan Doyle"),
+        ("The Count of Monte Cristo", "Alexandre Dumas"),
+        ("The Old Man and the Sea", "Ernest Hemingway"),
+        ("The Lion, the Witch, and the Wardrobe", "C.S. Lewis"),
+        ("The Hunchback of Notre Dame", "Victor Hugo"),
+        ("Pinocchio", "Carlo Collodi"),
+        ("One Hundred Years of Solitude", "Gabriel García Márquez"),
+        ("Ivanhoe", "Walter Scott"),
+        ("The Red Badge of Courage", "Stephen Crane"),
+        ("Anne of Green Gables", "L.M. Montgomery"),
+        ("Black Beauty", "Anna Sewell"),
+        ("Peter Pan", "J.M. Barrie"),
+        ("A Farewell to Arms", "Ernest Hemingway"),
+        ("The House of the Seven Gables", "Nathaniel Hawthorne"),
+        ("Lord of the Flies", "William Golding"),
+        ("The Prince and the Pauper", "Mark Twain"),
+        ("A Portrait of the Artist as a Young Man", "James Joyce"),
+        ("Lord Jim", "Joseph Conrad"),
+        ("Harry Potter and the Chamber of Secrets", "J.K. Rowling"),
+        ("The Red & the Black", "Stendhal"),
+        ("The Stranger", "Albert Camus"),
+        ("The Trial", "Franz Kafka"),
+        ("Lady Chatterley's Lover", "D.H. Lawrence"),
+        ("Kidnapped: The Adventures of David Balfour", "Robert Louis Stevenson"),
+        ("The Catcher in the Rye", "J.D. Salinger"),
+        ("Fahrenheit 451", "Ray Bradbury"),
+        ("A Journey to the Center of the Earth", "Jules Verne"),
+        ("Vanity Fair", "William Makepeace Thackeray"),
+        ("All Quiet on the Western Front", "Erich Maria Remarque"),
+        ("Gone with the Wind", "Margaret Mitchell"),
+        ("My Ántonia", "Willa Cather"),
+        ("Of Mice and Men", "John Steinbeck"),
+        ("The Vicar of Wakefield", "Oliver Goldsmith"),
+        ("A Connecticut Yankee in King Arthur's Court", "Mark Twain"),
+        ("White Fang", "Jack London"),
+        ("Fathers and Sons", "Ivan Sergeevich Turgenev"),
+        ("Doctor Zhivago", "Boris Leonidovich Pasternak"),
+        ("The Decameron", "Giovanni Boccaccio"),
+        ("Nineteen Eighty-Four", "George Orwell"),
+        ("The Jungle", "Upton Sinclair"),
+        ("The Da Vinci Code", "Dan Brown"),
+        ("Persuasion", "Jane Austen"),
+        ("Mansfield Park", "Jane Austen"),
+        ("Candide", "Voltaire"),
+        ("For Whom the Bell Tolls", "Ernest Hemingway"),
+        ("Far from the Madding Crowd", "Thomas Hardy"),
+        ("The Fellowship of the Ring", "J.R.R. Tolkien"),
+        ("The Return of the Native", "Thomas Hardy"),
+        ("Sons and Lovers", "D.H. Lawrence"),
+        ("Charlotte's Web", "E.B. White"),
+        ("The Swiss Family Robinson", "Johann David Wyss"),
+        ("Bleak House", "Charles Dickens"),
+        ("Père Goriot", "Honoré de Balzac"),
+        ("Utopia", "Thomas More"),
+        ("The History of Tom Jones, a Foundling", "Henry Fielding"),
+        ("Harry Potter and the Prisoner of Azkaban", "J.K. Rowling"),
+        ("Kim", "Rudyard Kipling"),
+        ("The Sound and the Fury", "William Faulkner"),
+        ("Harry Potter and the Goblet of Fire", "J.K. Rowling"),
+        ("The Mill on the Floss", "George Eliot"),
+        ("A Wrinkle in Time", "Madeleine L'Engle"),
+        ("The Hound of the Baskervilles", "Arthur Conan Doyle"),
+        ("The Two Towers", "J.R.R. Tolkien"),
+        ("The War of the Worlds", "H.G. Wells"),
+        ("Middlemarch", "George Eliot"),
+        ("The Age of Innocence", "Edith Wharton"),
+        ("The Color Purple", "Alice Walker"),
+        ("Northanger Abbey", "Jane Austen"),
+        ("East of Eden", "John Steinbeck"),
+        ("On the Road", "Jack Kerouac"),
+        ("Catch-22", "Joseph Heller"),
+        ("Around the World in Eighty Days", "Jules Verne"),
+        ("Hard Times", "Charles Dickens"),
+        ("Beloved", "Toni Morrison"),
+        ("Mrs. Dalloway", "Virginia Woolf"),
+        ("To the Lighthouse", "Virginia Woolf"),
+        ("The Magician's Nephew", "C.S. Lewis"),
+        ("Harry Potter and the Order of the Phoenix", "J.K. Rowling"),
+        ("The Sun Also Rises", "Ernest Hemingway"),
+        ("The Good Earth", "Pearl S. Buck"),
+        ("Silas Marner", "George Eliot"),
+        ("Love in the Time of Cholera", "Gabriel García Márquez"),
+        ("Rebecca", "Daphne Du Maurier"),
+        ("Jude the Obscure", "Thomas Hardy"),
+        ("Twilight", "Stephenie Meyer"),
+        ("A Passage to India", "E.M. Forster"),
+        ("The Plague", "Albert Camus"),
+        ("Nicholas Nickleby", "Charles Dickens"),
+        ("The Pearl", "John Steinbeck"),
+        ("Ethan Frome", "Edith Wharton"),
+        ("The Tale of Genji", "Murasaki Shikibu"),
+        ("The Giver", "Lois Lowry"),
+        ("The Alchemist", "Paulo Coelho"),
+        ("The Strange Case of Dr. Jekyll and Mr. Hyde", "Robert Louis Stevenson"),
+        ("Robinson Crusoe", "Daniel Defoe"),
+        ("Tender is the Night", "F. Scott Fitzgerald"),
+        ("The Idiot", "Fyodor Dostoyevsky"),
+        ("Hatchet", "Gary Paulsen"),
+        ("The Kite Runner", "Khaled Hosseini"),
+        ("One Flew Over the Cuckoo's Nest", "Ken Kesey"),
+        ("The Portrait of a Lady", "Henry James"),
+        ("The Outsiders", "S.E. Hinton"),
+        ("Ben-Hur", "Lew Wallace"),
+        ("The Mayor of Casterbridge", "Thomas Hardy"),
+        ("Cry, The Beloved Country", "Alan Paton"),
+        ("The Last Battle", "C.S. Lewis"),
+        ("Captains Courageous", "Rudyard Kipling"),
+        ("The Castle", "Franz Kafka"),
+        ("The Metamorphosis", "Franz Kafka"),
+        ("The Magic Mountain (Der Zauberberg)", "Thomas Mann"),
+        ("James and the Giant Peach", "Roald Dahl"),
+        ("The Horse and His Boy", "C.S. Lewis"),
+        ("Angels &amp; Demons", "Dan Brown"),
+        ("The Voyage of the Dawn Treader", "C.S. Lewis"),
+        ("The Bell Jar", "Sylvia Plath"),
+        ("Women in Love", "D.H. Lawrence"),
+        ("The Yearling", "Marjorie Kinnan Rawlings"),
+        ("O Pioneers!", "Willa Cather"),
+        ("The Handmaid's Tale", "Margaret Atwood"),
+        ("The Moonstone", "Wilkie Collins"),
+        ("The Old Curiosity Shop", "Charles Dickens"),
+        ("Little Dorrit", "Charles Dickens"),
+        ("Prince Caspian: The Return to Narnia", "C.S. Lewis"),
+        ("Sister Carrie", "Theodore Dreiser"),
+        ("The Silver Chair", "C.S. Lewis"),
+        ("The Hunger Games", "Suzanne Collins"),
+        ("This Side of Paradise", "F. Scott Fitzgerald"),
+        ("Eugénie Grandet", "Honoré de Balzac"),
+        ("Of Human Bondage", "W. Somerset Maugham"),
+        ("Dream of the Red Chamber", "Cao Xueqin"),
+        ("Life of Pi", "Yann Martel"),
+        ("Harry Potter and the Deathly Hallows", "J.K. Rowling"),
+        ("Invisible Man", "Ralph Ellison"),
+        ("Steppenwolf", "Hermann Hesse"),
+        ("The Sorrows of Young Werther", "Johann Wolfgang von Goethe"),
+        ("Bridge to Terabithia", "Katherine Paterson"),
+        ("The Invisible Man", "H.G. Wells"),
+        ("Holes", "Louis Sachar"),
+        ("Siddhartha", "Hermann Hesse"),
+        ("A Tree Grows in Brooklyn", "Betty Smith"),
+        ("Through the Looking-Glass, and What Alice Found There", "Lewis Carroll"),
+        ("In Cold Blood", "Truman Capote"),
+        ("The House of the Spirits", "Isabel Allende"),
+        ("Adam Bede", "George Eliot"),
+        ("The Betrothed", "Alessandro Manzoni"),
+        ("The Book Thief", "Markus Zusak"),
+        ("Their Eyes Were Watching God", "Zora Neale Hurston"),
+        ("One Day in the Life of Ivan Denisovich", "Aleksandr Isaevich Solzhenitsyn"),
+        ("The Sea Wolf", "Jack London"),
+        ("Catching Fire", "Suzanne Collins"),
+        ("Roll of Thunder, Hear My Cry", "Mildred D. Taylor"),
+        ("Death Comes for the Archbishop", "Willa Cather"),
+        ("The House of Mirth", "Edith Wharton"),
+        ("Light in August", "William Faulkner"),
+        ("The Pickwick Papers", "Charles Dickens"),
+        ("Remembrance of Things Past", "Marcel Proust"),
+        ("Barchester Towers and the Warden", "Anthony Trollope"),
+        ("The Bridge of San Luis Rey", "Thornton Wilder"),
+        ("The Help", "Kathryn Stockett"),
+        ("Murder on the Orient Express", "Agatha Christie"),
+        ("The Lovely Bones", "Alice Sebold"),
+        ("The Appeal", "John Grisham"),
+        ("Dombey And Son", "Charles Dickens"),
+        ("Slaughterhouse-Five", "Kurt Vonnegut"),
+        ("An American Tragedy", "Theodore Dreiser"),
+        ("The Bluest Eye", "Toni Morrison"),
+        ("Little House In the Big Woods", "Laura Ingalls Wilder"),
+        ("Pippi Longstocking", "Astrid Lindgren"),
+        ("Germinal", "Émile Zola"),
+        ("The Heart Is a Lonely Hunter", "Carson McCullers"),
+        ("The Woman In White", "Wilkie Collins"),
+        ("Absalom, Absalom!", "William Faulkner"),
+        ("A Painted House", "John Grisham"),
+        ("The Girl With the Dragon Tattoo", "Stieg Larsson"),
+        ("A Room With a View", "E.M. Forster"),
+        ("Watership Down", "Richard Adams"),
+        ("Memoirs of a Geisha", "Arthur Golden"),
+        ("Our Mutual Friend", "Charles Dickens"),
+        ("Babbitt", "Sinclair Lewis"),
+        ("The Red Pony", "John Steinbeck"),
+    ]
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM books")
+    conn.commit()
+    count = 0
+    for name, author in seed_list:
+        category = infer_category(name)
+        cover = fetch_cover_from_openlibrary(name, author)
+        cur.execute(
+            "INSERT INTO books(name, author, category, cover_image) VALUES(?,?,?,?)",
+            (name, author, category, cover),
+        )
+        conn.commit()
+        count += 1
+    conn.close()
+    return count
+
 # DATABASE
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -111,7 +713,8 @@ def init_db():
             barcode TEXT,
             shelf TEXT,
             shelf_row TEXT,
-            shelf_column TEXT
+            shelf_column TEXT,
+            cover_image TEXT
         )
         """
     )
@@ -159,6 +762,8 @@ def init_db():
         cur.execute("ALTER TABLE books ADD COLUMN shelf_row TEXT")
     if "shelf_column" not in book_cols:
         cur.execute("ALTER TABLE books ADD COLUMN shelf_column TEXT")
+    if "cover_image" not in book_cols:
+        cur.execute("ALTER TABLE books ADD COLUMN cover_image TEXT")
 
     # Migration for issue_date in issued table (for better tracking)
     cur.execute("PRAGMA table_info(issued)")
@@ -214,13 +819,16 @@ def init_db():
         "INSERT OR IGNORE INTO users(id,username,password,email,created_at) VALUES(1,'admin','admin123','admin@library.local', datetime('now'))"
     )
 
-    # Seed the given 50 books if missing
+    # Seed the given 50 books if missing, but do not fetch remote cover images during startup.
     for name, author in books_data:
         category = infer_category(name)
         cur.execute("SELECT id FROM books WHERE name=? AND author=?", (name, author))
         found = cur.fetchone()
         if not found:
-            cur.execute("INSERT INTO books(name, author, category) VALUES(?, ?, ?)", (name, author, category))
+            cur.execute(
+                "INSERT INTO books(name, author, category, cover_image) VALUES(?, ?, ?, ?)",
+                (name, author, category, ""),
+            )
         else:
             cur.execute(
                 "UPDATE books SET category = COALESCE(NULLIF(category, ''), ?) WHERE name=? AND author=?",
@@ -301,7 +909,7 @@ def send_overdue_email(to_email, username, book_name, due_date, days_late, late_
         f"Your issued book '{book_name}' is overdue.\n"
         f"Due date: {due_date}\n"
         f"Overdue days: {days_late}\n"
-        f"Current late fee: Rs {late_fee}\n\n"
+        f"Current late fee: Rs {late_fee}\n\n" 
         "Please return the book as soon as possible.\n"
         "Library Management System"
     )
@@ -371,7 +979,8 @@ def fetch_books_with_status(cur, q="", category=""):
             CASE
                 WHEN EXISTS (SELECT 1 FROM issued i WHERE i.book = b.name AND COALESCE(i.status, 'Issued') = 'Issued')
                 THEN 0 ELSE 1
-            END AS is_available
+            END AS is_available,
+            COALESCE(b.cover_image, '') AS cover_image
         FROM books b
         {where_sql}
         ORDER BY b.name
@@ -461,6 +1070,7 @@ def build_location_view_from_row(row):
         "shelf": row[5] or "Not assigned",
         "shelf_row": row[6] or "Not assigned",
         "shelf_column": row[7] or "Not assigned",
+        "cover_image": row[8] or "",
     }
 
 
@@ -526,7 +1136,8 @@ def find_book_location(cur, search_text):
                 COALESCE(barcode, ''),
                 COALESCE(shelf, ''),
                 COALESCE(shelf_row, ''),
-                COALESCE(shelf_column, '')
+                COALESCE(shelf_column, ''),
+                COALESCE(cover_image, '')
             FROM books
             WHERE barcode = ?
             """,
@@ -548,7 +1159,8 @@ def find_book_location(cur, search_text):
                 COALESCE(barcode, ''),
                 COALESCE(shelf, ''),
                 COALESCE(shelf_row, ''),
-                COALESCE(shelf_column, '')
+                COALESCE(shelf_column, ''),
+                COALESCE(cover_image, '')
             FROM books
             WHERE name LIKE ? OR author LIKE ? OR COALESCE(barcode, '') LIKE ?
             ORDER BY
@@ -580,7 +1192,8 @@ def find_book_location(cur, search_text):
                 COALESCE(barcode, ''),
                 COALESCE(shelf, ''),
                 COALESCE(shelf_row, ''),
-                COALESCE(shelf_column, '')
+                COALESCE(shelf_column, ''),
+                COALESCE(cover_image, '')
             FROM books
             """
         )
@@ -1175,13 +1788,16 @@ def admin_books():
             shelf = normalize_location_value(request.form.get("shelf", ""))
             shelf_row = normalize_location_value(request.form.get("shelf_row", ""))
             shelf_column = normalize_location_value(request.form.get("shelf_column", ""))
+            cover_image = save_book_cover(request.files.get("cover_image"))
+            if not cover_image:
+                cover_image = fetch_cover_from_openlibrary(book, author)
             if book:
                 cur.execute(
                     """
-                    INSERT INTO books(name, author, category, barcode, shelf, shelf_row, shelf_column)
-                    VALUES(?,?,?,?,?,?,?)
+                    INSERT INTO books(name, author, category, barcode, shelf, shelf_row, shelf_column, cover_image)
+                    VALUES(?,?,?,?,?,?,?,?)
                     """,
-                    (book, author, category, barcode, shelf, shelf_row, shelf_column),
+                    (book, author, category, barcode, shelf, shelf_row, shelf_column, cover_image),
                 )
                 conn.commit()
         elif form_action == "update_location":
@@ -1223,7 +1839,8 @@ def admin_books():
             COALESCE(barcode, ''),
             COALESCE(shelf, ''),
             COALESCE(shelf_row, ''),
-            COALESCE(shelf_column, '')
+            COALESCE(shelf_column, ''),
+            COALESCE(cover_image, '')
         FROM books
         {where_sql}
         ORDER BY id DESC
@@ -1408,5 +2025,34 @@ def logout():
     session.clear()
     return redirect("/")
 
+
+@app.route("/robots.txt")
+def robots():
+    return app.send_static_file("robots.txt")
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    import sys
+    if "--seed" in sys.argv:
+        try:
+            count = seed_books_now()
+            report_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed_report_local.txt")
+            with open(report_path, "w", encoding="utf-8") as fh:
+                fh.write(f"seeded_count={count}\n")
+            print(f"Seeded {count} books (report: {report_path})")
+        except Exception as e:
+            print("Seeding failed:", e)
+        sys.exit(0)
+
+    if "--download-covers" in sys.argv:
+        try:
+            total, downloaded, failed = download_missing_book_covers()
+            print(
+                f"Processed {total} books with missing covers. "
+                f"Downloaded: {downloaded}. Failed: {failed}."
+            )
+        except Exception as e:
+            print("Cover download failed:", e)
+        sys.exit(0)
+
+    app.run(host="127.0.0.1", port=5000, debug=True)

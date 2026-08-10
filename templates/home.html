@@ -431,6 +431,28 @@
       color: #0f5132;
       font-weight: 600;
     }
+    .cover-thumb {
+      width: 50px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      display: block;
+    }
+    .cover-placeholder {
+      display: inline-flex;
+      width: 50px;
+      height: 70px;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      color: #64748b;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      font-size: 11px;
+      text-align: center;
+      padding: 4px;
+    }
     .request-btn {
       border: 0;
       border-radius: 8px;
@@ -507,6 +529,7 @@
             <thead>
               <tr>
                 <th>#</th>
+                <th>Cover</th>
                 <th>Book Name</th>
                 <th>Author</th>
                 <th>Category</th>
@@ -519,6 +542,13 @@
               {% for b in books %}
               <tr>
                 <td>{{ b[0] }}</td>
+                <td>
+                  {% if b[6] %}
+                  <img src="/static/{{ b[6] }}" alt="{{ b[1] }} cover" class="cover-thumb">
+                  {% else %}
+                  <span class="cover-placeholder">No cover</span>
+                  {% endif %}
+                </td>
                 <td>{{ b[1] }}</td>
                 <td>{{ b[2] }}</td>
                 <td>{{ b[3] }}</td>

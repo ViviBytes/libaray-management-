@@ -16,7 +16,8 @@
     .item { border-radius: 16px; padding: 16px; background: #f8fafc; border: 1px solid #dbeafe; }
     .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 7px; }
     .value { font-size: 24px; font-weight: 700; color: #0f172a; }
-    .hero { margin-bottom: 18px; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #1d4ed8, #0f172a); color: #fff; }
+    .hero { margin-bottom: 18px; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #1d4ed8, #0f172a); color: #fff; display: grid; gap: 16px; }
+    .hero-cover { width: 100%; max-width: 200px; height: auto; border-radius: 18px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18); }
     .hero p { margin: 6px 0 0; color: rgba(255,255,255,0.85); }
     .missing { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 16px; padding: 16px; }
     .actions { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
@@ -35,6 +36,9 @@
 
       {% if book %}
       <div class="hero">
+        {% if book.cover_image %}
+        <img src="/static/{{ book.cover_image }}" alt="{{ book.name }} cover" class="hero-cover">
+        {% endif %}
         <h1>{{ book.name }}</h1>
         <p>{{ book.author }} | {{ book.category }}</p>
       </div>
