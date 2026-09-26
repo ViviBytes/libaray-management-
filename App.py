@@ -114,49 +114,31 @@ def save_book_cover(uploaded_file):
     return f"book_covers/{unique_name}"
 
 
-def _openlibrary_cover_url(doc):
-    cover_id = doc.get("cover_i")
-    if cover_id:
-        return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
-
-    edition_key = doc.get("cover_edition_key") or (doc.get("edition_key") or [])
-    if edition_key:
-        if isinstance(edition_key, list):
-            edition_key = edition_key[0]
-        if edition_key:
-            return f"https://covers.openlibrary.org/b/olid/{urllib.parse.quote_plus(str(edition_key))}-L.jpg"
-
-    isbns = doc.get("isbn") or []
-    if isbns:
-        return f"https://covers.openlibrary.org/b/isbn/{urllib.parse.quote_plus(str(isbns[0]))}-L.jpg"
-
-    return None
-
-
 def fetch_cover_from_openlibrary(title, author):
     """Try to find a cover image via OpenLibrary search and save it locally.
     Returns relative path like 'book_covers/xxx.jpg' or None.
     """
-    def _search(query_url):
-        with urllib.request.urlopen(query_url, timeout=15) as resp:
-            data = json.load(resp)
-        docs = data.get("docs", []) if isinstance(data, dict) else []
-        if not docs:
-            return None
-        return _openlibrary_cover_url(docs[0])
-
     try:
         q_title = urllib.parse.quote_plus(title or "")
         q_author = urllib.parse.quote_plus(author or "")
         url = f"https://openlibrary.org/search.json?title={q_title}&author={q_author}&limit=1"
-        cover_url = _search(url)
-        if not cover_url and q_title:
-            url = f"https://openlibrary.org/search.json?title={q_title}&limit=1"
-            cover_url = _search(url)
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            data = json.load(resp)
+        docs = data.get("docs", []) if isinstance(data, dict) else []
+        cover_url = None
+        if docs:
+            doc = docs[0]
+            cover_id = doc.get("cover_i")
+            if cover_id:
+                cover_url = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+            else:
+                isbns = doc.get("isbn") or []
+                if isbns:
+                    cover_url = f"https://covers.openlibrary.org/b/isbn/{urllib.parse.quote_plus(isbns[0])}-L.jpg"
 
         if cover_url:
             os.makedirs(COVER_FOLDER, exist_ok=True)
-            ext = os.path.splitext(urllib.parse.urlparse(cover_url).path)[1] or ".jpg"
+            ext = os.path.splitext(cover_url)[1] or ".jpg"
             unique_name = f"{uuid.uuid4().hex}{ext}"
             target_path = os.path.join(COVER_FOLDER, unique_name)
             try:
@@ -422,28 +404,6 @@ def admin_seed_books():
 
     conn.close()
     return redirect('/admin?notice=' + quote_plus('Seeded books and downloaded available covers.'))
-
-
-def download_missing_book_covers(limit=None):
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT id, name, author FROM books WHERE COALESCE(cover_image, '')='' ORDER BY name")
-    rows = cur.fetchall()
-    if limit is not None:
-        rows = rows[:limit]
-    total = len(rows)
-    downloaded = 0
-    failed = 0
-    for book_id, name, author in rows:
-        cover = fetch_cover_from_openlibrary(name, author)
-        if cover:
-            cur.execute("UPDATE books SET cover_image=? WHERE id=?", (cover, book_id))
-            conn.commit()
-            downloaded += 1
-        else:
-            failed += 1
-    conn.close()
-    return total, downloaded, failed
 
 
 def seed_books_now():
@@ -853,7 +813,7 @@ def load_smtp_settings():
     if not os.path.exists(SMTP_SETTINGS_PATH):
         if not settings["SMTP_FROM"] and settings["SMTP_USER"]:
             settings["SMTP_FROM"] = settings["SMTP_USER"]
-        return settings
+            return settings
 
     try:
         with open(SMTP_SETTINGS_PATH, "r", encoding="utf-8") as fh:
@@ -2031,6 +1991,11 @@ def robots():
     return app.send_static_file("robots.txt")
 
 
+@app.route("/sitemap.xml")
+def sitemap():
+    return app.send_static_file("sitemap.xml")
+
+
 if __name__ == "__main__":
     import sys
     if "--seed" in sys.argv:
@@ -2042,17 +2007,6 @@ if __name__ == "__main__":
             print(f"Seeded {count} books (report: {report_path})")
         except Exception as e:
             print("Seeding failed:", e)
-        sys.exit(0)
-
-    if "--download-covers" in sys.argv:
-        try:
-            total, downloaded, failed = download_missing_book_covers()
-            print(
-                f"Processed {total} books with missing covers. "
-                f"Downloaded: {downloaded}. Failed: {failed}."
-            )
-        except Exception as e:
-            print("Cover download failed:", e)
         sys.exit(0)
 
     app.run(host="127.0.0.1", port=5000, debug=True)
